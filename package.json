@@ -79,5 +79,8 @@
   },
   "overrides": {
     "oidc-token-hash": "5.0.1"
+  },
+  "prisma": {
+    "seed": "node scripts/seed.ts"
   }
 }
