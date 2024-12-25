@@ -47,8 +47,8 @@ export async function POST(
 
 
   const tx_reference = uuidv4();;
-  const return_url = `${process.env.NEXT_PUBLIC_VERCEL_URL || "https://prototype-git-main-dawitgweldus-projects.vercel.app"}/courses/${params.courseId}/chapters/${chapter?.id}`;
-  const callback_url = `${process.env.NEXT_PUBLIC_VERCEL_URL || "https://prototype-git-main-dawitgweldus-projects.vercel.app"}/courses/${params.courseId}/chapters/${chapter?.id}`;
+  const return_url = `${process.env.NEXT_PUBLIC_APP_URL}/courses/${params.courseId}/chapters/${chapter?.id}`;
+  const callback_url = `${process.env.NEXT_PUBLIC_APP_URL}/courses/${params.courseId}/chapters/${chapter?.id}`;
 
   let checkout_url = null;
   const res = await axios({
