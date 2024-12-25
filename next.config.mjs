@@ -9,7 +9,7 @@ const nextConfig = {
     env: {
         // NEXT_PUBLIC_APP_URL: `https://${process.env.VERCEL_URL}`,
         // NEXT_PUBLIC_APP_URL: `https://danielgetachew.tech`,
-        NEXT_PUBLIC_APP_URL: `http://localhost:3000`,
+        NEXT_PUBLIC_APP_URL: `https://dave-lms.vercel.app`,
     },
     async headers() {
         return [
