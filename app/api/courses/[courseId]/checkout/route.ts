@@ -88,12 +88,7 @@ export async function GET(req: Request) {
   const searchParams = url.searchParams;
   console.log("[CALLBACK RAN]: [status]? ", url, searchParams);
 
-  if (searchParams.has("status")) {
-    if (searchParams.get("status") !== "success") {
-      return NextResponse.json({ status: "Transaction Failed" });
-    }
-
-    const tx_ref = searchParams.get('trx_ref')!;
+  const tx_ref = searchParams.get('trx_ref')!;
     try {
       const transaction = await db.chapaTransaction.findFirst({
         where: {
@@ -115,7 +110,15 @@ export async function GET(req: Request) {
     } catch (error) {
       throw new Error("Transaction Data not found");
     }
-  }
+
+
+  // if (searchParams.has("status")) {
+  //   if (searchParams.get("status") !== "success") {
+  //     return NextResponse.json({ status: "Transaction Failed" });
+  //   }
+
+    
+  // }
 
   return NextResponse.json({ message: "200" }, { status: 200 });
 }
