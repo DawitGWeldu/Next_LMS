@@ -48,7 +48,7 @@ export async function POST(
 
   const tx_reference = uuidv4();;
   const return_url = `${process.env.NEXT_PUBLIC_APP_URL}/courses/${params.courseId}/chapters/${chapter?.id}`;
-  const callback_url = `${process.env.NEXT_PUBLIC_APP_URL}/courses/${params.courseId}/chapters/${chapter?.id}`;
+  const callback_url = `${process.env.NEXT_PUBLIC_APP_URL}/api/courses/checkout`;
 
   let checkout_url = null;
   const res = await axios({
@@ -90,34 +90,34 @@ export async function GET(
   const searchParams = new URLSearchParams(url);
   console.log("[CALLBACK RAN]: [status]? ", url, searchParams)
 
-  // let tx_ref: string = "";
-  // if (searchParams.has("status")) {
-  //     if (searchParams.get("status") != "success") {
-  //         return Response.json({ status: "Transaction Failed" });
-  //     }
-  //     tx_ref = searchParams.get('trx_ref')!;
-  //     try {
-  //         const transaction = await db.chapaTransaction.findFirst({
-  //             where: {
-  //                 tx_ref: searchParams.get('trx_ref')!,
-  //                 status: 'PENDING'
-  //             }
-  //         })
-  //         console.log("[TRANSACTION]: ", JSON.stringify(transaction))
+  let tx_ref: string = "";
+  if (searchParams.has("status")) {
+      if (searchParams.get("status") != "success") {
+          return Response.json({ status: "Transaction Failed" });
+      }
+      tx_ref = searchParams.get('trx_ref')!;
+      try {
+          const transaction = await db.chapaTransaction.findFirst({
+              where: {
+                  tx_ref: searchParams.get('trx_ref')!,
+                  status: 'PENDING'
+              }
+          })
+          console.log("[TRANSACTION]: ", JSON.stringify(transaction))
 
-  //         await db.purchase.create({
-  //             data: {
-  //                 courseId: transaction!.courseId,
-  //                 userId: transaction!.userId,
-  //             }
-  //         });
-  //         console.log("[CALLBACK RAN]: Success")
+          await db.purchase.create({
+              data: {
+                  courseId: transaction!.courseId,
+                  userId: transaction!.userId,
+              }
+          });
+          console.log("[CALLBACK RAN]: Success")
 
-  //         return Response.json({ status: "Transaction Success" });
-  //     } catch (error) {
-  //         throw new Error("Transaction Data not found")
-  //     }
+          return Response.json({ status: "Transaction Success" });
+      } catch (error) {
+          throw new Error("Transaction Data not found")
+      }
 
-  // }
+  }
   return NextResponse.json({ "message": "200" }, { status: 200 });
 }
