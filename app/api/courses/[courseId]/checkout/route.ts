@@ -83,41 +83,39 @@ export async function POST(
 }
 
 
-export async function GET(
-  req: Request) {
-  const url = req.clone().url;
-  const search = new URL(url);
-  const searchParams = new URLSearchParams(url);
-  console.log("[CALLBACK RAN]: [status]? ", url, searchParams)
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const searchParams = url.searchParams;
+  console.log("[CALLBACK RAN]: [status]? ", url, searchParams);
 
-  let tx_ref: string = "";
   if (searchParams.has("status")) {
-      if (searchParams.get("status") != "success") {
-          return Response.json({ status: "Transaction Failed" });
-      }
-      tx_ref = searchParams.get('trx_ref')!;
-      try {
-          const transaction = await db.chapaTransaction.findFirst({
-              where: {
-                  tx_ref: searchParams.get('trx_ref')!,
-                  status: 'PENDING'
-              }
-          })
-          console.log("[TRANSACTION]: ", JSON.stringify(transaction))
+    if (searchParams.get("status") !== "success") {
+      return NextResponse.json({ status: "Transaction Failed" });
+    }
 
-          await db.purchase.create({
-              data: {
-                  courseId: transaction!.courseId,
-                  userId: transaction!.userId,
-              }
-          });
-          console.log("[CALLBACK RAN]: Success")
+    const tx_ref = searchParams.get('trx_ref')!;
+    try {
+      const transaction = await db.chapaTransaction.findFirst({
+        where: {
+          tx_ref: tx_ref,
+          status: 'PENDING'
+        }
+      });
+      console.log("[TRANSACTION]: ", JSON.stringify(transaction));
 
-          return Response.json({ status: "Transaction Success" });
-      } catch (error) {
-          throw new Error("Transaction Data not found")
-      }
+      await db.purchase.create({
+        data: {
+          courseId: transaction!.courseId,
+          userId: transaction!.userId,
+        }
+      });
+      console.log("[CALLBACK RAN]: Success");
 
+      return NextResponse.json({ status: "Transaction Success" });
+    } catch (error) {
+      throw new Error("Transaction Data not found");
+    }
   }
-  return NextResponse.json({ "message": "200" }, { status: 200 });
+
+  return NextResponse.json({ message: "200" }, { status: 200 });
 }
