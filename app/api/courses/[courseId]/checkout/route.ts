@@ -64,7 +64,21 @@ export async function POST(
       amount: 100,
       tx_ref: tx_reference,
       callback_url: callback_url,
-      return_url: return_url
+      return_url: return_url,
+      meta: {
+        customFields: [
+          {
+            display_name: "tx_ref",
+            variable_name: "tx_ref",
+            value: tx_reference
+          },
+          {
+            display_name: "course_id",
+            variable_name: "course_id",
+            value: course!.id
+          }
+        ]
+      }
     }
   })
 
