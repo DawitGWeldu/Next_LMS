@@ -5,7 +5,7 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+  previewFeatures = ["fullTextSearchPostgres"]
 }
 
 
@@ -113,6 +113,7 @@ model Course {
 
   @@index([categoryId])
   // @@fulltext([title])
+  ChapaTransaction ChapaTransaction[]
 }
 
 model Category {
@@ -210,6 +211,7 @@ model ChapaTransaction {
   id String @id @default(uuid())
   userId String
   courseId String
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
   tx_ref String @unique
   status TransactionStatus @default(PENDING)
 

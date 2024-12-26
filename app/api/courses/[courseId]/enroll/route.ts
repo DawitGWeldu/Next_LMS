@@ -5,113 +5,67 @@ import { v4 as uuidv4 } from 'uuid';
 import axios from "axios"
 import { db } from "@/lib/db";
 import { Course } from "@prisma/client";
-import { NextApiRequest, NextApiResponse } from "next";
-import { json } from "stream/consumers";
-
-// export async function POST(
-//   req: Request,
-//   { params }: { params: { courseId: string } }
-// ) {
 
 
-//   const user = await currentUser();
-//   if (!user) {
-//     return new NextResponse("Unauthorized", { status: 401 });
-
-//   }
-
-
-//   const course = await db.course.findUnique({
-//     where: {
-//       id: params.courseId,
-//       isPublished: true,
-//     }
-//   })
-//   const chapter = await db.chapter.findFirst({
-//     where: {
-//       courseId: params.courseId,
-//       isPublished: true,
-//     }
-//   })
-//   const purchase = await db.purchase.findUnique({
-//     where: {
-//       userId_courseId: {
-//         userId: user.id!,
-//         courseId: params.courseId
-//       }
-//     }
-//   })
-
-//   if (purchase) {
-//     return new NextResponse("Already purchased", { status: 400 });
-//   }
+export async function GET(
+  req: Request,
+  { params }: { params: { courseId: string } }) {
+  // const url = new URL(req.url);
+  // const searchParams = url.searchParams;
 
 
-//   const tx_reference = uuidv4();;
-//   const return_url = `${process.env.NEXT_PUBLIC_APP_URL}/courses/${params.courseId}/chapters/${chapter?.id}`;
-//   const callback_url = `${process.env.NEXT_PUBLIC_APP_URL}/api/courses/${params.courseId}/checkout`;
+  const user = await currentUser();
+  if (!user) {
+    return new NextResponse("Unauthorized", { status: 401 });
 
-//   let checkout_url = null;
-//   const res = await axios({
-//     method: "post",
-//     url: "https://api.chapa.co/v1/transaction/initialize",
-//     headers: {
-//       "Authorization": `Bearer ${process.env.CHAPA_SECRET_KEY}`
-//     },
-//     data: {
-//       currency: "ETB",
-//       first_name: "F",
-//       last_name: "L",
-//       amount: 100,
-//       tx_ref: tx_reference,
-//       callback_url: callback_url,
-//       return_url: return_url
-//     }
-//   })
+  }
 
-//   if (res.data.status == "success") {
-//     checkout_url = res.data.data.checkout_url
-//   }
+  try {
+    const chapa_transaction = await db.chapaTransaction.findFirst({
+      where: {
+        courseId: params.courseId,
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    if (!chapa_transaction) {
+      return new NextResponse("Trasaction not found", { status: 404 });
+    }
+    const tx_ref = chapa_transaction.tx_ref;
+    console.log("[CALLBACK RAN]: [tx_ref]? ", tx_ref || "no tx_ref");
+    await db.purchase.create({
+      data: {
+        courseId: chapa_transaction.courseId,
+        userId: chapa_transaction.userId,
+      }
+    });
+    console.log("[CALLBACK RAN]: Success");
+  } catch (error) {
+    console.log("[ERROR]: ", error);
+  }
 
-//   await db.chapaTransaction.create({
-//     data: {
-//       courseId: course!.id,
-//       tx_ref: tx_reference,
-//       userId: user.id!
-//     }
-//   })
-//   return NextResponse.json({ url: checkout_url });
-// }
+  // try {
+  //   // const transaction = await db.chapaTransaction.findFirst({
+  //   //   where: {
+  //   //     tx_ref: tx_ref,
+  //   //     status: 'PENDING'
+  //   //   }
+  //   // });
+  //   // console.log("[TRANSACTION]: ", JSON.stringify(transaction));
 
+  //   // await db.purchase.create({
+  //   //   data: {
+  //   //     courseId: transaction!.courseId,
+  //   //     userId: transaction!.userId,
+  //   //   }
+  //   // });
+  //   console.log("[CALLBACK RAN]: Success");
 
-export async function POST(req: Request) {
-  const url = new URL(req.url);
-  const searchParams = url.searchParams;
-
-  // const tx_ref = searchParams.get('trx_ref');
-  console.log("[CALLBACK RAN]: [req]? ", JSON.stringify(req) || "no req");
-
-    // try {
-    //   // const transaction = await db.chapaTransaction.findFirst({
-    //   //   where: {
-    //   //     tx_ref: tx_ref,
-    //   //     status: 'PENDING'
-    //   //   }
-    //   // });
-    //   // console.log("[TRANSACTION]: ", JSON.stringify(transaction));
-
-    //   // await db.purchase.create({
-    //   //   data: {
-    //   //     courseId: transaction!.courseId,
-    //   //     userId: transaction!.userId,
-    //   //   }
-    //   // });
-    //   console.log("[CALLBACK RAN]: Success");
-
-    //   return NextResponse.json({ status: "Transaction Success" });
-    // } catch (error) {
-    //   throw new Error("Transaction Data not found");
-    // }
+  //   return NextResponse.json({ status: "Transaction Success" });
+  // } catch (error) {
+  //   throw new Error("Transaction Data not found");
+  // }
 
 
   // if (searchParams.has("status")) {
@@ -119,8 +73,8 @@ export async function POST(req: Request) {
   //     return NextResponse.json({ status: "Transaction Failed" });
   //   }
 
-    
+
   // }
 
-  return NextResponse.json({ message: "200", url: url || "no url", searchParams: searchParams || "no search params" }, { status: 200 });
+  return NextResponse.json({ message: "Course enrolled" }, { status: 200 });
 }
