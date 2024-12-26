@@ -84,7 +84,7 @@ import { json } from "stream/consumers";
 // }
 
 
-export async function GET(req: Request) {
+export async function POST(req: Request) {
   const url = new URL(req.url);
   const searchParams = url.searchParams;
 
