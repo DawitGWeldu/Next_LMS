@@ -48,7 +48,7 @@ export async function POST(
 
   const tx_reference = uuidv4();;
   const return_url = `${process.env.NEXT_PUBLIC_APP_URL}/courses/${params.courseId}/chapters/${chapter?.id}`;
-  const callback_url = `${process.env.NEXT_PUBLIC_APP_URL}/api/courses/${params.courseId}/checkout`;
+  const callback_url = `${process.env.NEXT_PUBLIC_APP_URL}/api/courses/${params.courseId}/enroll`;
 
   let checkout_url = null;
   const res = await axios({
@@ -83,42 +83,42 @@ export async function POST(
 }
 
 
-export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const searchParams = url.searchParams;
-  console.log("[CALLBACK RAN]: [status]? ", url, searchParams);
+// export async function GET(req: Request) {
+//   const url = new URL(req.url);
+//   const searchParams = url.searchParams;
+//   console.log("[CALLBACK RAN]: [status]? ", url, searchParams);
 
-  const tx_ref = searchParams.get('trx_ref')!;
-    try {
-      const transaction = await db.chapaTransaction.findFirst({
-        where: {
-          tx_ref: tx_ref,
-          status: 'PENDING'
-        }
-      });
-      console.log("[TRANSACTION]: ", JSON.stringify(transaction));
+//   const tx_ref = searchParams.get('trx_ref')!;
+//     try {
+//       const transaction = await db.chapaTransaction.findFirst({
+//         where: {
+//           tx_ref: tx_ref,
+//           status: 'PENDING'
+//         }
+//       });
+//       console.log("[TRANSACTION]: ", JSON.stringify(transaction));
 
-      await db.purchase.create({
-        data: {
-          courseId: transaction!.courseId,
-          userId: transaction!.userId,
-        }
-      });
-      console.log("[CALLBACK RAN]: Success");
+//       await db.purchase.create({
+//         data: {
+//           courseId: transaction!.courseId,
+//           userId: transaction!.userId,
+//         }
+//       });
+//       console.log("[CALLBACK RAN]: Success");
 
-      return NextResponse.json({ status: "Transaction Success" });
-    } catch (error) {
-      throw new Error("Transaction Data not found");
-    }
+//       return NextResponse.json({ status: "Transaction Success" });
+//     } catch (error) {
+//       throw new Error("Transaction Data not found");
+//     }
 
 
-  // if (searchParams.has("status")) {
-  //   if (searchParams.get("status") !== "success") {
-  //     return NextResponse.json({ status: "Transaction Failed" });
-  //   }
+//   // if (searchParams.has("status")) {
+//   //   if (searchParams.get("status") !== "success") {
+//   //     return NextResponse.json({ status: "Transaction Failed" });
+//   //   }
 
     
-  // }
+//   // }
 
-  return NextResponse.json({ message: "200" }, { status: 200 });
-}
+//   return NextResponse.json({ message: "200" }, { status: 200 });
+// }
