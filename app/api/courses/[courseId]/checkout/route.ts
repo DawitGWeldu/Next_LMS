@@ -47,7 +47,7 @@ export async function POST(
 
 
   const tx_reference = uuidv4();;
-  const return_url = `${process.env.NEXT_PUBLIC_APP_URL}/courses/${params.courseId}/chapters/${chapter?.id}`;
+  const return_url = `${process.env.NEXT_PUBLIC_APP_URL}/api/courses/checkout`;
   const callback_url = `${process.env.NEXT_PUBLIC_APP_URL}/api/courses/checkout`;
 
   let checkout_url = null;
