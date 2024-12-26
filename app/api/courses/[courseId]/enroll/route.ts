@@ -86,30 +86,31 @@ import { NextApiRequest, NextApiResponse } from "next";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const searchParams = url.searchParams;
-  console.log("[CALLBACK RAN]: [status]? ", url, searchParams);
 
-  // const tx_ref = searchParams.get('trx_ref')!;
-  //   try {
-  //     const transaction = await db.chapaTransaction.findFirst({
-  //       where: {
-  //         tx_ref: tx_ref,
-  //         status: 'PENDING'
-  //       }
-  //     });
-  //     console.log("[TRANSACTION]: ", JSON.stringify(transaction));
+  const tx_ref = searchParams.get('trx_ref')!;
+  console.log("[CALLBACK RAN]: [tx_ref]? ", tx_ref || "no tx_ref");
 
-  //     await db.purchase.create({
-  //       data: {
-  //         courseId: transaction!.courseId,
-  //         userId: transaction!.userId,
-  //       }
-  //     });
-  //     console.log("[CALLBACK RAN]: Success");
+    try {
+      const transaction = await db.chapaTransaction.findFirst({
+        where: {
+          tx_ref: tx_ref,
+          status: 'PENDING'
+        }
+      });
+      console.log("[TRANSACTION]: ", JSON.stringify(transaction));
 
-  //     return NextResponse.json({ status: "Transaction Success" });
-  //   } catch (error) {
-  //     throw new Error("Transaction Data not found");
-  //   }
+      await db.purchase.create({
+        data: {
+          courseId: transaction!.courseId,
+          userId: transaction!.userId,
+        }
+      });
+      console.log("[CALLBACK RAN]: Success");
+
+      return NextResponse.json({ status: "Transaction Success" });
+    } catch (error) {
+      throw new Error("Transaction Data not found");
+    }
 
 
   // if (searchParams.has("status")) {
