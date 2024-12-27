@@ -40,9 +40,9 @@ export const SidebarRoutes = () => {
     const pathname = usePathname();
     const { data: session } = useSession();
 
-    const isTeacherPage = pathname?.includes("/teacher");
+    // const isTeacherPage = pathname?.includes("/teacher");
     
-    const routes = session?.user.role == "TEACHER" ? teacherRoutes : guestRoutes;
+    const routes = session?.user.role != "TEACHER" ? guestRoutes : guestRoutes.concat(teacherRoutes);
     return (
         <div className="flex flex-col w-full">
             {routes.map((route) => (

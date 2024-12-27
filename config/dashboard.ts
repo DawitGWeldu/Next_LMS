@@ -24,6 +24,11 @@ export const dashboardConfig: DashboardConfig = {
       icon: "billing",
     },
     {
+      title: "My Courses",
+      href: "/teacher/courses",
+      icon: "laptop",
+    },
+    {
       title: "Settings",
       href: "/settings",
       icon: "settings",
