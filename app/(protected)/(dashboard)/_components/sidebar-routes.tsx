@@ -3,6 +3,7 @@
 import { BarChart, Compass, Layout, List } from "lucide-react"
 import { SidebarItem } from "./sidebar-item";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 const guestRoutes = [
     {
@@ -14,7 +15,12 @@ const guestRoutes = [
         icon: Compass,
         label: "Browse",
         href: "/search"
-    }
+    },
+    {
+        icon: List,
+        label: "My Courses",
+        href: "/teacher/courses"
+    },
 ]
 
 const teacherRoutes = [
@@ -32,9 +38,12 @@ const teacherRoutes = [
 
 export const SidebarRoutes = () => {
     const pathname = usePathname();
+    const { data: session } = useSession();
+
     const isTeacherPage = pathname?.includes("/teacher");
-    const routes = isTeacherPage? teacherRoutes : guestRoutes;
-    return(
+    
+    const routes = session?.user.role == "TEACHER" ? teacherRoutes : guestRoutes;
+    return (
         <div className="flex flex-col w-full">
             {routes.map((route) => (
                 <SidebarItem
