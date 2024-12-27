@@ -22,7 +22,6 @@ export const CourseSidebar = async ({
   course,
   progressCount,
 }: CourseSidebarProps) => {
-
   const user = await currentUser();
 
   if (!user?.id) {
@@ -59,7 +58,7 @@ export const CourseSidebar = async ({
       </div>
      
 
-      <nav className="grid items-start gap-2 w-full">
+      <nav className="grid items-start gap-4 w-full">
         {course.chapters.map((item, index) => {
           const href = `/courses/${item.courseId}/chapters/${item.id}`;
           return (
@@ -68,7 +67,7 @@ export const CourseSidebar = async ({
               <Link key={index} href={href}>
                 <span
                   className={cn(
-                    "group h-10 rounded-md flex items-center px-3 py-2 text-sm font-medium bg-accent/50 hover:bg-accent hover:text-accent-foreground",
+                    "group h-12 rounded-md flex items-center px-3 py-3 text-sm font-medium bg-accent hover:bg-transparent hover:border-b-2 hover:text-accent-foreground",
                     !!item.userProgress?.[0]?.isCompleted && "text-emerald-700 hover:text-emerald-700"
                   )}
                 >
