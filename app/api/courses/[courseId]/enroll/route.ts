@@ -12,6 +12,7 @@ export async function GET(
   { params }: { params: { courseId: string } }) {
   // const url = new URL(req.url);
   // const searchParams = url.searchParams;
+  console.log("[CALLBACK RAN]: [courseId]? ", params.courseId || "no courseId");
 
 
   const user = await currentUser();
