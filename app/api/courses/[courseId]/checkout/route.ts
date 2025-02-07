@@ -4,96 +4,131 @@ import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from 'uuid';
 import axios from "axios"
 import { db } from "@/lib/db";
-import { Course } from "@prisma/client";
+import { Course, TransactionStatus } from "@prisma/client";
 import { NextApiRequest, NextApiResponse } from "next";
 
 export async function POST(
   req: Request,
   { params }: { params: { courseId: string } }
 ) {
-
-
-  const user = await currentUser();
-  if (!user) {
-    return new NextResponse("Unauthorized", { status: 401 });
-
-  }
-
-
-  const course = await db.course.findUnique({
-    where: {
-      id: params.courseId,
-      isPublished: true,
+  try {
+    const user = await currentUser();
+    if (!user) {
+      return new NextResponse("Unauthorized", { status: 401 });
     }
-  })
-  const chapter = await db.chapter.findFirst({
-    where: {
-      courseId: params.courseId,
-      isPublished: true,
-    }
-  })
-  const purchase = await db.purchase.findUnique({
-    where: {
-      userId_courseId: {
-        userId: user.id!,
-        courseId: params.courseId
+
+    console.log("[CHECKOUT_INIT] User:", user.id, "Course:", params.courseId);
+
+    const course = await db.course.findUnique({
+      where: {
+        id: params.courseId,
+        isPublished: true,
       }
+    });
+
+    if (!course) {
+      console.log("[CHECKOUT_ERROR] Course not found:", params.courseId);
+      return new NextResponse("Course not found", { status: 404 });
     }
-  })
 
-  if (purchase) {
-    return new NextResponse("Already purchased", { status: 400 });
-  }
+    const purchase = await db.purchase.findUnique({
+      where: {
+        userId_courseId: {
+          userId: user.id!,
+          courseId: params.courseId
+        }
+      }
+    });
 
+    if (purchase) {
+      console.log("[CHECKOUT_ERROR] Course already purchased:", params.courseId);
+      return new NextResponse("Already purchased", { status: 400 });
+    }
 
-  const tx_reference = uuidv4();;
-  const return_url = `${process.env.NEXT_PUBLIC_APP_URL}/courses/${params.courseId}/chapters/${chapter?.id}`;
-  const callback_url = `${process.env.NEXT_PUBLIC_APP_URL}/api/courses/${params.courseId}/enroll`;
+    // Check for any pending transactions
+    const pendingTransaction = await db.chapaTransaction.findFirst({
+      where: {
+        userId: user.id,
+        courseId: params.courseId,
+        status: TransactionStatus.PENDING
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
 
-  let checkout_url = null;
-  const res = await axios({
-    method: "post",
-    url: "https://api.chapa.co/v1/transaction/initialize",
-    headers: {
-      "Authorization": `Bearer ${process.env.CHAPA_SECRET_KEY}`
-    },
-    data: {
-      currency: "ETB",
-      first_name: "F",
-      last_name: "L",
-      amount: 100,
-      tx_ref: tx_reference,
-      callback_url: callback_url,
-      return_url: return_url,
-      meta: {
-        customFields: [
-          {
-            display_name: "tx_ref",
-            variable_name: "tx_ref",
-            value: tx_reference
-          },
-          {
-            display_name: "course_id",
-            variable_name: "course_id",
-            value: course!.id
+    // If there's a recent pending transaction, reuse it
+    if (pendingTransaction && 
+        (new Date().getTime() - new Date(pendingTransaction.createdAt).getTime()) < 1000 * 60 * 30) { // 30 minutes
+      console.log("[CHECKOUT_REUSE] Reusing pending transaction:", pendingTransaction.tx_ref);
+      return NextResponse.json({ 
+        url: `https://checkout.chapa.co/checkout/payment/${pendingTransaction.tx_ref}` 
+      });
+    }
+
+    const tx_reference = uuidv4();
+    const return_url = `${process.env.NEXT_PUBLIC_APP_URL}/api/courses/${params.courseId}/enroll`;
+    const callback_url = return_url; // Keep callback same as return_url
+
+    console.log("[CHECKOUT_NEW] Creating new transaction:", tx_reference);
+
+    try {
+      const chapaPayload = {
+        amount: course.price || 100,
+        currency: "ETB",
+        tx_ref: tx_reference,
+        return_url: return_url,
+        callback_url: callback_url
+      };
+
+      console.log("[CHAPA_PAYLOAD]", JSON.stringify(chapaPayload, null, 2));
+
+      const res = await axios({
+        method: "post",
+        url: "https://api.chapa.co/v1/transaction/initialize",
+        headers: {
+          "Authorization": `Bearer ${process.env.NEXT_PUBLIC_CHAPA_SECRET_KEY}`,
+          "Content-Type": "application/json"
+        },
+        data: chapaPayload
+      });
+
+      console.log("[CHAPA_INIT_RESPONSE]", JSON.stringify(res.data, null, 2));
+
+      if (res.data?.status === "success") {
+        // Create transaction record
+        await db.chapaTransaction.create({
+          data: {
+            courseId: course.id,
+            tx_ref: tx_reference,
+            userId: user.id!,
+            status: TransactionStatus.PENDING
           }
-        ]
+        });
+
+        console.log("[CHECKOUT_SUCCESS] Created transaction:", tx_reference);
+        return NextResponse.json({ url: res.data.data.checkout_url });
+      } else {
+        console.error("[CHAPA_INIT_ERROR] Failed response:", res.data);
+        throw new Error("Failed to initialize payment: Invalid response");
       }
+    } catch (error: any) {
+      console.error("[CHAPA_PAYMENT_ERROR]", {
+        message: error.message,
+        response: error.response?.data
+      });
+      return new NextResponse(
+        `Payment initialization failed: ${error.response?.data?.message || error.message}`, 
+        { status: 500 }
+      );
     }
-  })
-
-  if (res.data.status == "success") {
-    checkout_url = res.data.data.checkout_url
+  } catch (error: any) {
+    console.error("[COURSE_CHECKOUT_ERROR]", {
+      message: error.message,
+      stack: error.stack
+    });
+    return new NextResponse("Internal Error", { status: 500 });
   }
-
-  await db.chapaTransaction.create({
-    data: {
-      courseId: course!.id,
-      tx_ref: tx_reference,
-      userId: user.id!
-    }
-  })
-  return NextResponse.json({ url: checkout_url });
 }
 
 
