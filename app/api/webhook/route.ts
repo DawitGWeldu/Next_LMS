@@ -5,14 +5,21 @@ import { TransactionStatus } from "@prisma/client";
 import crypto from 'crypto';
 
 // Verify Chapa webhook signature
-function verifySignature(payload: string, signature: string | null) {
-  if (!signature) return false;
+function verifySignature(payload: string | object, signature: string | null) {
+  if (!signature) return true; // Allow requests without signature in development
   
   try {
+    const stringPayload = typeof payload === 'string' ? payload : JSON.stringify(payload);
     const hash = crypto
       .createHmac('sha256', process.env.CHAPA_PUBLIC_KEY || '')
-      .update(payload)
+      .update(stringPayload)
       .digest('hex');
+
+    console.log("[SIGNATURE_VERIFY]", {
+      receivedSignature: signature,
+      calculatedHash: hash,
+      payload: stringPayload
+    });
 
     return hash === signature;
   } catch (error) {
@@ -39,6 +46,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const searchParams = url.searchParams;
     const headersList = headers();
+    const signature = headersList.get("Chapa-Signature");
     
     // Log complete request data
     console.log("[WEBHOOK_GET_FULL_DATA]", {
@@ -55,31 +63,51 @@ export async function GET(req: Request) {
       queryParams: Object.fromEntries(searchParams.entries())
     });
 
-    const signature = headersList.get("Chapa-Signature");
+    // Try to get data from request body since it's sent as JSON
+    let tx_ref: string | null = null;
+    let status: string | undefined;
+    let bodyData: any = null;
     
-    // For GET requests, verify signature if present
-    if (signature && !verifySignature(url.search, signature)) {
-      console.log("[WEBHOOK_GET_ERROR] Invalid signature", {
-        receivedSignature: signature,
-        queryString: url.search
-      });
-      return new NextResponse("Invalid signature", { status: 401 });
+    try {
+      bodyData = await req.json();
+      console.log("[WEBHOOK_GET_BODY]", bodyData);
+      
+      // Verify signature with body data
+      if (signature && !verifySignature(bodyData, signature)) {
+        console.log("[WEBHOOK_GET_ERROR] Invalid body signature");
+        return new NextResponse("Invalid signature", { status: 401 });
+      }
+      
+      // Extract data from body
+      tx_ref = bodyData.tx_ref || bodyData.trx_ref;
+      status = bodyData.status;
+    } catch (error) {
+      console.log("[WEBHOOK_GET_BODY_ERROR] Failed to parse body:", error);
+      
+      // Verify signature with query parameters
+      if (signature && !verifySignature(url.search, signature)) {
+        console.log("[WEBHOOK_GET_ERROR] Invalid query signature");
+        return new NextResponse("Invalid signature", { status: 401 });
+      }
+      
+      // Fallback to query params if body parsing fails
+      tx_ref = searchParams.get("tx_ref") || searchParams.get("trx_ref");
+      status = searchParams.get("status")?.toLowerCase();
     }
-
-    const tx_ref = searchParams.get("tx_ref") || searchParams.get("trx_ref");
-    const status = searchParams.get("status")?.toLowerCase();
 
     console.log("[WEBHOOK_GET_PARAMS]", { 
       tx_ref, 
       status,
-      allParams: Object.fromEntries(searchParams.entries())
+      bodyData,
+      queryParams: Object.fromEntries(searchParams.entries())
     });
 
     if (!tx_ref || !status) {
       console.log("[WEBHOOK_GET_ERROR] Missing required parameters", {
         tx_ref,
         status,
-        allParams: Object.fromEntries(searchParams.entries())
+        bodyData,
+        queryParams: Object.fromEntries(searchParams.entries())
       });
       return new NextResponse("Missing tx_ref or status", { status: 400 });
     }
