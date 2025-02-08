@@ -45,32 +45,16 @@ export async function POST(
       return new NextResponse("Already purchased", { status: 400 });
     }
 
-    // Check for any pending transactions
-    const pendingTransaction = await db.chapaTransaction.findFirst({
-      where: {
-        userId: user.id,
-        courseId: params.courseId,
-        status: TransactionStatus.PENDING
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-
-    // If there's a recent pending transaction, reuse it
-    if (pendingTransaction && 
-        (new Date().getTime() - new Date(pendingTransaction.createdAt).getTime()) < 1000 * 60 * 30) { // 30 minutes
-      console.log("[CHECKOUT_REUSE] Reusing pending transaction:", pendingTransaction.tx_ref);
-      return NextResponse.json({ 
-        url: `https://checkout.chapa.co/checkout/payment/${pendingTransaction.tx_ref}` 
-      });
-    }
-
     const tx_reference = uuidv4();
+    // Return URL is where the user will be redirected after payment
     const return_url = `${process.env.NEXT_PUBLIC_APP_URL}/api/courses/${params.courseId}/enroll`;
-    const callback_url = return_url; // Keep callback same as return_url
+    // Callback URL is where Chapa will send the webhook
+    const callback_url = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhook`;
 
-    console.log("[CHECKOUT_NEW] Creating new transaction:", tx_reference);
+    console.log("[CHECKOUT_NEW] Creating new transaction:", tx_reference, {
+      return_url,
+      callback_url
+    });
 
     try {
       const chapaPayload = {
