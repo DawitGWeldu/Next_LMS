@@ -26,11 +26,16 @@ export async function GET(req: Request) {
       params: Object.fromEntries(searchParams.entries())
     });
 
-    const tx_ref = searchParams.get("tx_ref");
+    // Check for both possible parameter names
+    const tx_ref = searchParams.get("tx_ref") || searchParams.get("trx_ref");
     const status = searchParams.get("status")?.toLowerCase();
 
+    console.log("[WEBHOOK_GET_PARAMS]", { tx_ref, status });
+
     if (!tx_ref) {
-      console.log("[WEBHOOK_GET_ERROR] No transaction reference found");
+      console.log("[WEBHOOK_GET_ERROR] No transaction reference found in params:", 
+        Object.fromEntries(searchParams.entries())
+      );
       return new NextResponse("No transaction reference found", { status: 400 });
     }
 

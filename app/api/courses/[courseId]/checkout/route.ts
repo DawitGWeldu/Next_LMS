@@ -47,7 +47,7 @@ export async function POST(
 
     const tx_reference = uuidv4();
     // Return URL is where the user will be redirected after payment
-    const return_url = `${process.env.NEXT_PUBLIC_APP_URL}/api/courses/${params.courseId}/enroll`;
+    const return_url = `${process.env.NEXT_PUBLIC_APP_URL}/api/courses/${params.courseId}/enroll?trx_ref=${tx_reference}`;
     // Callback URL is where Chapa will send the webhook
     const callback_url = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhook`;
 
