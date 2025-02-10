@@ -2,54 +2,17 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { TransactionStatus } from "@prisma/client";
-import crypto from 'crypto';
-
-// Verify Chapa webhook signature using the secret hash
-function verifySignature(payload: string, signature: string | null) {
-  if (!signature) {
-    console.log("[SIGNATURE_VERIFY_ERROR] No signature provided");
-    return false;
-  }
-  
-  try {
-    // Use the secret hash from environment variables
-    const secret = process.env.NEXT_PUBLIC_CHAPA_ECRYPTION_KEY;
-    if (!secret) {
-      console.log("[SIGNATURE_VERIFY_ERROR] No secret key configured");
-      return false;
-    }
-
-    // Calculate HMAC SHA256 hash as per Chapa docs
-    const hash = crypto
-      .createHmac('sha256', secret)
-      .update(payload)
-      .digest('hex');
-
-    console.log("[SIGNATURE_VERIFY]", {
-      receivedSignature: signature,
-      calculatedHash: hash,
-      payload: payload
-    });
-
-    return hash === signature;
-  } catch (error) {
-    console.error("[SIGNATURE_VERIFY_ERROR]", error);
-    return false;
-  }
-}
 
 // Handle POST requests (Chapa sends webhooks as POST)
 export async function POST(req: Request) {
   try {
     const headersList = headers();
-    const signature = headersList.get("Chapa-Signature") || headersList.get("x-chapa-signature");
     const body = await req.text();
     
     // Log complete request data
     console.log("[WEBHOOK_POST_FULL_DATA]", {
       method: "POST",
       headers: {
-        signature,
         contentType: headersList.get("content-type"),
         userAgent: headersList.get("user-agent"),
         host: headersList.get("host"),
@@ -57,15 +20,6 @@ export async function POST(req: Request) {
       },
       rawBody: body
     });
-
-    // Verify webhook signature
-    if (!verifySignature(body, signature)) {
-      console.log("[WEBHOOK_POST_ERROR] Invalid signature", {
-        receivedSignature: signature,
-        payload: body
-      });
-      return new NextResponse("Invalid signature", { status: 401 });
-    }
 
     // Parse the webhook body
     const webhookData = JSON.parse(body);
@@ -160,7 +114,7 @@ export async function OPTIONS(req: Request) {
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Chapa-Signature, x-chapa-signature',
+      'Access-Control-Allow-Headers': 'Content-Type',
     },
   });
 }

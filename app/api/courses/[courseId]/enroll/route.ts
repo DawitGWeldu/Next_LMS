@@ -13,13 +13,25 @@ export async function GET(
   try {
     const url = new URL(req.url);
     const searchParams = url.searchParams;
-    const tx_ref = searchParams.get("tx_ref");
+    
+    // Log all parameters for debugging
+    console.log("[ENROLL_PARAMS]", {
+      allParams: Object.fromEntries(searchParams.entries()),
+      url: url.toString()
+    });
+
+    // Check for both tx_ref and trx_ref
+    const tx_ref = searchParams.get("tx_ref") || searchParams.get("trx_ref");
     const status = searchParams.get("status");
 
     console.log("[CHAPA_CALLBACK] Status:", status, "TX_REF:", tx_ref);
 
     if (!tx_ref || !status) {
-      console.log("[CHAPA_CALLBACK_ERROR] Missing parameters:", { tx_ref, status });
+      console.log("[CHAPA_CALLBACK_ERROR] Missing parameters:", { 
+        tx_ref, 
+        status,
+        searchParams: Object.fromEntries(searchParams.entries())
+      });
       return new NextResponse("Missing transaction reference or status", { status: 400 });
     }
 
