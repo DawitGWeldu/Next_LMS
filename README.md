@@ -2,6 +2,20 @@
 
 A modern, full-featured Learning Management System built with Next.js 14, featuring course management, secure payments, and SMS verification.
 
+## Preview
+
+![LMS Preview](.github/assets/preview.png)
+
+## Demo
+
+🔗 **[Live Demo](https://dave-lms.vercel.app)**
+
+Experience the full features:
+- Browse available courses
+- Test the authentication system
+- Explore the course creation interface
+- Try the Chapa payment integration
+
 ## Features
 
 - 🔐 Secure Authentication with Phone Number & SMS Verification
