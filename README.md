@@ -4,7 +4,7 @@ A modern, full-featured Learning Management System built with Next.js 14, featur
 
 ## Preview
 
-![LMS Preview](.github/assets/preview.png)
+![LMS Preview](.github/assets/preview.jpg)
 
 ## Demo
 
