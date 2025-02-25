@@ -1,18 +1,81 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Learning Management System (LMS)
+
+A modern, full-featured Learning Management System built with Next.js 14, featuring course management, secure payments, and SMS verification.
+
+## Features
+
+- 🔐 Secure Authentication with Phone Number & SMS Verification
+- 💳 Course Purchase with Chapa Payment Integration
+- 📱 Responsive Design for Mobile and Desktop
+- 🎥 Video Content Hosting with Mux
+- 📁 File Upload Support with UploadThing
+- 🔍 Course Search and Filtering
+- 👨‍🏫 Teacher Dashboard for Course Management
+- 📊 Student Progress Tracking
+
+## Tech Stack
+
+- **Framework:** Next.js 14 with App Router
+- **Database:** MySQL with Prisma ORM
+- **Authentication:** NextAuth.js
+- **Payment:** Chapa Payment Gateway
+- **SMS:** Afromessage API
+- **Testing:** Playwright
+- **Styling:** Tailwind CSS
+- **Video:** Mux
+- **File Upload:** UploadThing
 
 ## Getting Started
 
-First, run the development server:
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Set up environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+4. Set up the database:
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   ```
+5. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
+## Environment Variables
+
+Required environment variables:
+- `DATABASE_URL`: MySQL database URL
+- `NEXT_PUBLIC_APP_URL`: Application URL
+- `NEXT_PUBLIC_CHAPA_SECRET_KEY`: Chapa payment secret key
+- `AFRO_SMS_API_KEY`: Afromessage API key
+- `AFRO_SMS_IDENTIFIER_ID`: Afromessage identifier
+- `MUX_TOKEN_ID` & `MUX_TOKEN_SECRET`: Mux video hosting credentials
+- `UPLOADTHING_SECRET` & `UPLOADTHING_APP_ID`: UploadThing credentials
+- `AUTH_SECRET`: NextAuth.js secret
+
+## Testing
+
+Run end-to-end tests:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run test:e2e
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Run tests with UI:
+```bash
+npm run test:e2e:ui
+```
+
+Run tests in debug mode:
+```bash
+npm run test:e2e:debug
+```
+
+## License
+
+[MIT](https://choosealicense.com/licenses/mit/)
 

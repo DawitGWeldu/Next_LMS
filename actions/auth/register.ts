@@ -9,8 +9,6 @@ import { getUserByPhoneNumber } from "@/data/user";
 import { sendVerificationSms } from "@/lib/sms";
 import parsePhoneNumber from "libphonenumber-js";
 
-
-
 export const register = async (values: z.infer<typeof RegisterSchema>) => {
   const validatedFields = RegisterSchema.safeParse(values);
 
@@ -37,21 +35,19 @@ export const register = async (values: z.infer<typeof RegisterSchema>) => {
     },
   });
 
-  
-  await sendVerificationSms(
-    `0${num}`,
-  ).then((res)=>{
-    saveVerificationCode(res, num);
-  }).catch((err)=>{
-    console.log("[sendVerificationSms]: "+ err);
-  });
+  // Skip SMS verification in test mode
+  if (process.env.NODE_ENV === 'test') {
+    return { success: "Registration successful" };
+  }
 
-
-  // //offline test mode
-  // const token = sendVerificationSms(`0${num}`);
-  // saveVerificationCode(token, num);
-  // //end offline mode
-  return { success: "Sending confirmation code via SMS",  };
+  try {
+    const code = await sendVerificationSms(`0${num}`);
+    await saveVerificationCode(code, num);
+    return { success: "Sending confirmation code via SMS" };
+  } catch (error) {
+    console.error("[VERIFICATION_ERROR]", error);
+    return { error: "Failed to send verification code" };
+  }
 };
 
 const saveVerificationCode = async (code: string, phoneNumber: string) => {

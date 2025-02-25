@@ -9,6 +9,12 @@ export const publicRoutes = [
   "/api/uploadthing",
   "/api/webhook",
   "/api/verify-payment",
+  "/api/test/mock-sms",
+  "/api/test/verify-otp",
+  "/api/test/setup",
+  "/api/test/cleanup",
+  "/api/test/mock-purchase",
+  "/api/test/last-transaction"
 ];
 
 /**

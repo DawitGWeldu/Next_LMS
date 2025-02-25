@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from 'uuid';
 import axios from "axios"
 import { db } from "@/lib/db";
-import { Course, TransactionStatus } from "@prisma/client";
 import { NextApiRequest, NextApiResponse } from "next";
 
 export async function POST(
@@ -47,9 +46,10 @@ export async function POST(
 
     const tx_reference = uuidv4();
     // Return URL is where the user will be redirected after payment
-    const return_url = `${process.env.NEXT_PUBLIC_APP_URL}/api/courses/${params.courseId}/enroll?tx_ref=${tx_reference}`;
+    const baseUrl = process.env.NODE_ENV === 'test' ? 'http://localhost:3000' : process.env.NEXT_PUBLIC_APP_URL;
+    const return_url = `${baseUrl}/api/courses/${params.courseId}/enroll?tx_ref=${tx_reference}`;
     // Callback URL is where Chapa will send the webhook
-    const callback_url = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhook`;
+    const callback_url = `${baseUrl}/api/webhook`;
 
     console.log("[CHECKOUT_NEW] Creating new transaction:", tx_reference, {
       return_url,
@@ -86,7 +86,7 @@ export async function POST(
             courseId: course.id,
             tx_ref: tx_reference,
             userId: user.id!,
-            status: TransactionStatus.PENDING
+            status: 'PENDING'
           }
         });
 

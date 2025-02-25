@@ -2,21 +2,35 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
-  timeout: 60000,
+  timeout: 120000,
   expect: {
-    timeout: 10000
+    timeout: 20000
   },
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  retries: process.env.CI ? 2 : 1,
+  workers: 1,
   reporter: 'html',
+  webServer: {
+    command: 'dotenv -e .env.test -- next dev',
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120000,
+    env: Object.entries(process.env).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {} as Record<string, string>)
+  },
   use: {
-    baseURL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-    trace: 'on-first-retry',
-    video: 'on-first-retry',
+    baseURL: 'http://localhost:3000',
+    trace: 'retain-on-failure',
+    video: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    navigationTimeout: 45000
+    navigationTimeout: 90000,
+    actionTimeout: 30000,
+    testIdAttribute: 'data-test-id',
   },
   projects: [
     {

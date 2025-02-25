@@ -8,9 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "test:db:setup": "dotenv -e .env.test -- ts-node scripts/setup-test-db.ts",
-    "test:e2e": "npm run test:db:setup && start-server-and-test dev http://localhost:3000 'dotenv -e .env.test -- playwright test'",
-    "test:e2e:ui": "npm run test:db:setup && start-server-and-test dev http://localhost:3000 'dotenv -e .env.test -- playwright test --ui'",
-    "test:e2e:debug": "npm run test:db:setup && start-server-and-test dev http://localhost:3000 'dotenv -e .env.test -- playwright test --debug'"
+    "test:e2e": "start-server-and-test 'dotenv -e .env.test -- next dev' http://localhost:3000 'dotenv -e .env.test -- playwright test'",
+    "test:e2e:ui": "start-server-and-test 'dotenv -e .env.test -- next dev' http://localhost:3000 'dotenv -e .env.test -- playwright test --ui'",
+    "test:e2e:debug": "start-server-and-test 'dotenv -e .env.test -- next dev' http://localhost:3000 'dotenv -e .env.test -- playwright test --debug'"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^1.4.0",
