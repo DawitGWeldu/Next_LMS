@@ -1512,15 +1512,7 @@ export function ScormPreview({
 
         // Common entry point filenames
         const commonEntryPoints = [
-          "scormRLO.htm",
-          "index.html",
-          "story.html",
-          "launch.html",
-          "player.html",
-          "scormcontent/index.html",
-          "scormdriver/indexAPI.html",
-          "index.htm",
-          "start.html",
+          "scormRLO.htm"
         ];
 
         // Try to find any of the common entry points

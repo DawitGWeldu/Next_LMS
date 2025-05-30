@@ -25,7 +25,7 @@ function parseManifest(manifestContent) {
     const parseError = xmlDoc.querySelector('parsererror');
     if (parseError) {
       console.error('XML parsing error:', parseError.textContent);
-      return { version: 'unknown', resources: [], organizations: {}, entryPoint: 'index.html' };
+      return { version: 'unknown', resources: [], organizations: {}, entryPoint: 'scormRLO.htm' };
     }
     
     console.log('XML parsing successful, extracting details');
@@ -179,9 +179,9 @@ function parseManifest(manifestContent) {
       });
     });
     
-    // If we still don't have an entry point, look for index.html or similar
+    // If we still don't have an entry point, look for scormRLO.htm or similar
     if (!entryPoint) {
-      const commonEntryPoints = ['index.html', 'index.htm', 'default.html', 'default.htm', 'start.html', 'start.htm'];
+      const commonEntryPoints = ['scormRLO.htm', 'index.html', 'index.htm', 'default.html', 'default.htm', 'start.html', 'start.htm'];
       const foundFile = commonEntryPoints.find(file => 
         resources.some(res => res.href === file) || 
         resources.some(res => res.files && res.files.some(f => f && f.href === file))
@@ -190,9 +190,9 @@ function parseManifest(manifestContent) {
       if (foundFile) {
         entryPoint = foundFile;
       } else {
-        // Default to index.html as absolute last resort
-        console.log('Using default entry point: index.html');
-        entryPoint = 'index.html';
+        // Default to scormRLO.htm as absolute last resort
+        console.log('Using default entry point: scormRLO.htm');
+        entryPoint = 'scormRLO.htm';
       }
     } else {
       console.log('Using default entry point:', entryPoint);
@@ -220,7 +220,7 @@ function parseManifest(manifestContent) {
     };
   } catch (err) {
     console.error('Error parsing manifest:', err);
-    return { version: 'unknown', resources: [], organizations: {}, entryPoint: 'index.html' };
+    return { version: 'unknown', resources: [], organizations: {}, entryPoint: 'scormRLO.htm' };
   }
 }
 

@@ -363,15 +363,9 @@ function findEntryPoint(fileList: string[]): string | undefined {
   
   // Common entry point filenames in order of likelihood
   const commonEntryPoints = [
-    "index.html",
-    "story.html",
-    "launch.html",
-    "player.html",
-    "scormcontent/index.html",
-    "scormdriver/indexAPI.html",
     "scormRLO.htm",
-    "index.htm",
-    "start.html"
+    "story.html",
+    "launch.html"
   ];
   
   // Try to find any of the common entry points
