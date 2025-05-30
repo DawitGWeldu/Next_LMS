@@ -589,14 +589,6 @@ function ScormLoadingIndicator({
         </div>
       )}
 
-      {/* Debug information - only render on client side */}
-      {isClient && (
-        <div className="mt-3 text-xs text-gray-400 border-t border-gray-200 pt-2">
-          <p>Raw progress value: {progress.toFixed(4)}</p>
-          <p>Stage: {stage || "unknown"}</p>
-          <p>Last update: {currentTime}</p>
-        </div>
-      )}
     </div>
   );
 }
@@ -1639,19 +1631,7 @@ export function ScormPreview({
             totalSize={packageSize}
             elapsedTime={elapsedTime}
           />
-          {isClient && (
-            <div className="absolute bottom-2 right-2 text-xs text-gray-400 bg-white/80 p-2 rounded border border-gray-200 max-w-xs max-h-32 overflow-auto">
-              <p>Updates: {progressUpdates.length}</p>
-              <ul className="text-[10px]">
-                {progressUpdates.slice(-5).map((update, i) => (
-                  <li key={i}>
-                    {new Date(update.time).toLocaleTimeString()}:{" "}
-                    {Math.round(update.value * 100)}% ({update.stage})
-                  </li>
-                ))}
-              </ul>
-              </div>
-            )}
+          
         </div>
       )}
       
