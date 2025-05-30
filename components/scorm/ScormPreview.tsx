@@ -1007,7 +1007,7 @@ export function ScormPreview({
     onError,
     initializationAttempts
   ]);
-
+  
   /**
    * Handle iframe load event
    */

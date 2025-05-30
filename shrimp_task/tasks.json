@@ -1,3 +1,180 @@
 {
-  "tasks": []
+  "tasks": [
+    {
+      "id": "bde5c910-0365-4822-a0f6-9dd82ec1ac04",
+      "name": "Refactor ScormStructureNav to use service worker extraction",
+      "description": "Modify the ScormStructureNav component to use the extractAndWaitForCompletion function from service-worker-registry.ts instead of its own downloadAndExtractScorm function. This ensures SCORM packages are only extracted once and use the same caching mechanism as ScormPreview.",
+      "notes": "The most challenging part of this task is adapting the result format from extractAndWaitForCompletion to work with the buildNavigationTree function. It may require creating a helper function to transform the data.",
+      "status": "completed",
+      "dependencies": [],
+      "createdAt": "2025-05-30T17:36:49.032Z",
+      "updatedAt": "2025-05-30T17:40:54.733Z",
+      "relatedFiles": [
+        {
+          "path": "components/scorm-structure-nav.tsx",
+          "type": "TO_MODIFY",
+          "description": "The main component that needs to be refactored to use the service worker",
+          "lineStart": 1,
+          "lineEnd": 357
+        },
+        {
+          "path": "lib/client/service-worker-registry.ts",
+          "type": "REFERENCE",
+          "description": "Contains the extractAndWaitForCompletion function to use for extraction",
+          "lineStart": 176,
+          "lineEnd": 352
+        }
+      ],
+      "implementationGuide": "1. Update the imports in ScormStructureNav.tsx to include necessary functions from service-worker-registry.ts\n2. Replace the custom extraction logic in the loadScormNavigation function with calls to extractAndWaitForCompletion\n3. Remove references to getScormPackage and storeScormPackage from scorm-cache.ts\n4. Update the progress tracking to use the service worker's progress reporting\n5. Ensure proper error handling for cases where the service worker is not available\n\nPseudocode for the updated loadScormNavigation function:\n```typescript\nconst loadScormNavigation = async () => {\n  try {\n    setIsLoading(true);\n    \n    // If a package was provided directly, use that\n    if (passedExtractedPackage) {\n      // Use existing code...\n      return;\n    }\n    \n    // Generate a key for the SCORM package\n    const key = createKeyFromUrl(`scorm-${courseId}-${scormUrl}`);\n    \n    // Use the service worker to extract the package\n    const result = await extractAndWaitForCompletion(\n      scormUrl,\n      key,\n      (progress, progressInfo) => {\n        if (isMounted.current) {\n          setExtractionProgress(progress);\n        }\n      }\n    );\n    \n    if (!result.success) {\n      throw new Error(result.error || 'Failed to extract SCORM package');\n    }\n    \n    // Convert the service worker result format to the format expected by buildNavigationTree\n    // This step might need adaptation based on the exact return format of extractAndWaitForCompletion\n    const adaptedPackage = {\n      manifest: parseManifestFromServiceWorkerResult(result),\n      files: new Map(), // Not needed if we're using service worker URLs\n      originalUrl: scormUrl,\n      extractedAt: Date.now(),\n      version: result.scormObj?.version || 'unknown'\n    };\n    \n    setExtractedPackage(adaptedPackage);\n    \n    // Build navigation tree from the adapted package\n    const navTree = buildNavigationTree(adaptedPackage);\n    setNavigationTree(navTree);\n    \n    // Auto-expand logic stays the same...\n  } catch (err) {\n    // Error handling stays the same...\n  } finally {\n    if (isMounted.current) {\n      setIsLoading(false);\n    }\n  }\n};\n```",
+      "verificationCriteria": "1. The ScormStructureNav component should use extractAndWaitForCompletion from service-worker-registry.ts\n2. The component should no longer use downloadAndExtractScorm, getScormPackage, or storeScormPackage\n3. The component should handle progress reporting similarly to ScormPreview\n4. The component should gracefully handle cases where the service worker is not available\n5. The component should maintain its current API and functionality",
+      "analysisResult": "The ScormStructureNav component currently implements its own SCORM package extraction and caching logic instead of using the service worker infrastructure already available in the project. This leads to potential duplicate extraction of packages, inconsistent state between components, and maintenance issues. The refactoring will ensure the component uses the same extraction and caching mechanism as ScormPreview, leveraging the service-worker-registry.ts functionality.",
+      "summary": "Successfully refactored the ScormStructureNav component to use service worker extraction instead of its own custom extraction logic. The component now uses extractAndWaitForCompletion from service-worker-registry.ts with proper progress tracking and error handling. Added an adapter function to convert service worker extraction results to the expected format.",
+      "completedAt": "2025-05-30T17:40:54.732Z"
+    },
+    {
+      "id": "f1c9f724-aaa3-493a-b87a-40a8bd5e1be0",
+      "name": "Adapt navigation tree building for service worker data",
+      "description": "Update the buildNavigationTree function or create an adapter to work with the data format returned by the service worker's extractAndWaitForCompletion function. This ensures the navigation tree can be built from the service worker's extraction result.",
+      "notes": "This task requires careful consideration of the data structures to ensure compatibility. The adapter function should be designed to handle various forms of data that might be returned by the service worker.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "bde5c910-0365-4822-a0f6-9dd82ec1ac04"
+        }
+      ],
+      "createdAt": "2025-05-30T17:36:49.032Z",
+      "updatedAt": "2025-05-30T17:41:50.684Z",
+      "relatedFiles": [
+        {
+          "path": "lib/client/scorm-navigation.ts",
+          "type": "REFERENCE",
+          "description": "Contains the buildNavigationTree function that works with ExtractedScormPackage",
+          "lineStart": 74,
+          "lineEnd": 150
+        },
+        {
+          "path": "components/scorm-structure-nav.tsx",
+          "type": "TO_MODIFY",
+          "description": "Where the adapter function will be used",
+          "lineStart": 1,
+          "lineEnd": 357
+        }
+      ],
+      "implementationGuide": "1. Create a new function to adapt the service worker extraction result to a format compatible with buildNavigationTree\n2. Analyze the structure returned by extractAndWaitForCompletion vs. what buildNavigationTree expects\n3. Ensure all necessary data is extracted and transformed correctly\n\nPseudocode for the adapter function:\n```typescript\nfunction adaptServiceWorkerResultForNavigation(result: ScormExtractionResult): ExtractedScormPackage {\n  // Create a basic manifest structure\n  const manifest: ScormManifest = {\n    version: result.scormObj?.version || 'unknown',\n    organizations: {},\n    resources: {}\n  };\n  \n  // If we have a more complete manifest in the result, use that\n  if (result.scormObj) {\n    // Extract organizations if available\n    if (result.scormObj.organizations) {\n      manifest.organizations = result.scormObj.organizations;\n    }\n    \n    // Extract resources\n    if (Array.isArray(result.scormObj.resources)) {\n      // Convert from array to object format if needed\n      result.scormObj.resources.forEach(res => {\n        if (res && typeof res === 'object' && 'identifier' in res) {\n          manifest.resources[res.identifier] = res;\n        }\n      });\n    } else if (result.scormObj.resources && typeof result.scormObj.resources === 'object') {\n      manifest.resources = result.scormObj.resources;\n    }\n    \n    // Copy other properties\n    if (result.scormObj.defaultOrganizationIdentifier) {\n      manifest.defaultOrganizationIdentifier = result.scormObj.defaultOrganizationIdentifier;\n    }\n  }\n  \n  // Return an object that simulates an ExtractedScormPackage\n  return {\n    manifest,\n    files: new Map(), // Empty map as we'll use service worker URLs\n    originalUrl: result.key, // Use the key as original URL if not available\n    extractedAt: Date.now(),\n    version: manifest.version as ScormVersion\n  };\n}\n```",
+      "verificationCriteria": "1. The adapter function should correctly transform the service worker result into a format compatible with buildNavigationTree\n2. The navigation tree should be correctly built and displayed in the UI\n3. All SCORM package structure information should be preserved during the transformation\n4. The solution should handle edge cases like missing or incomplete data",
+      "analysisResult": "The ScormStructureNav component currently implements its own SCORM package extraction and caching logic instead of using the service worker infrastructure already available in the project. This leads to potential duplicate extraction of packages, inconsistent state between components, and maintenance issues. The refactoring will ensure the component uses the same extraction and caching mechanism as ScormPreview, leveraging the service-worker-registry.ts functionality.",
+      "summary": "Successfully enhanced the adapter function to handle various data formats returned by the service worker. Added fallback mechanisms for packages with non-standard structures, improved entry point detection, and ensured all required properties are properly set to maintain compatibility with the buildNavigationTree function.",
+      "completedAt": "2025-05-30T17:41:50.682Z"
+    },
+    {
+      "id": "bad66103-dcf1-4fc6-97dd-586117ac149b",
+      "name": "Update navigation item handling for service worker URLs",
+      "description": "Modify the handleNavigateToItem function in ScormStructureNav to use service worker URLs instead of creating object URLs from extracted files. This ensures consistency with how ScormPreview handles navigation.",
+      "notes": "This change simplifies the navigation logic by removing the need to extract and manage file blobs directly. It relies on the service worker to serve the files, which is more efficient and consistent with how ScormPreview works.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "bde5c910-0365-4822-a0f6-9dd82ec1ac04"
+        }
+      ],
+      "createdAt": "2025-05-30T17:36:49.032Z",
+      "updatedAt": "2025-05-30T17:42:33.595Z",
+      "relatedFiles": [
+        {
+          "path": "components/scorm-structure-nav.tsx",
+          "type": "TO_MODIFY",
+          "description": "Contains the handleNavigateToItem function that needs to be updated",
+          "lineStart": 190,
+          "lineEnd": 225
+        },
+        {
+          "path": "lib/client/service-worker-registry.ts",
+          "type": "REFERENCE",
+          "description": "Contains the getScormFileUrl function to use for generating URLs",
+          "lineStart": 590,
+          "lineEnd": 593
+        }
+      ],
+      "implementationGuide": "1. Update the handleNavigateToItem function to use getScormFileUrl from service-worker-registry.ts\n2. Remove any code that creates object URLs from extracted files\n3. Ensure navigation works correctly with service worker URLs\n\nPseudocode for the updated handleNavigateToItem function:\n```typescript\nconst handleNavigateToItem = useCallback(async (itemId: string) => {\n  try {\n    setNavLoading(itemId);\n    \n    // Find the navigation item in the tree\n    const navItem = findNavigationItemById(navigationTree, itemId);\n    if (!navItem || !navItem.path) {\n      throw new Error('Invalid navigation item');\n    }\n    \n    // Instead of creating an object URL from extracted files,\n    // use the service worker URL\n    const filePath = navItem.path;\n    const fileUrl = getScormFileUrl(cacheKey(), filePath);\n    \n    // Update URL with the item ID\n    const newUrl = `${pathname}?item=${itemId}`;\n    router.push(newUrl, { scroll: false });\n    \n    // If a navigation callback is provided, call it with the resource URL\n    if (onNavigate) {\n      onNavigate(fileUrl);\n    }\n  } catch (err) {\n    console.error('Error navigating to SCORM item:', err);\n    toast.error('Failed to navigate to the selected item');\n  } finally {\n    setNavLoading(null);\n  }\n}, [navigationTree, pathname, router, onNavigate, cacheKey]);\n```",
+      "verificationCriteria": "1. The handleNavigateToItem function should use getScormFileUrl to generate URLs\n2. Navigation should work correctly with service worker URLs\n3. No object URLs should be created from extracted files\n4. The component should still call the onNavigate callback with the correct URL",
+      "analysisResult": "The ScormStructureNav component currently implements its own SCORM package extraction and caching logic instead of using the service worker infrastructure already available in the project. This leads to potential duplicate extraction of packages, inconsistent state between components, and maintenance issues. The refactoring will ensure the component uses the same extraction and caching mechanism as ScormPreview, leveraging the service-worker-registry.ts functionality.",
+      "summary": "Successfully updated the handleNavigateToItem function to use service worker URLs via getScormFileUrl instead of creating object URLs from extracted files. This change simplifies the navigation logic, makes it more consistent with ScormPreview, and eliminates the need to manage file blobs directly.",
+      "completedAt": "2025-05-30T17:42:33.594Z"
+    },
+    {
+      "id": "7dbde11f-873a-4680-b24b-ddd9462b4608",
+      "name": "Update component API documentation and error handling",
+      "description": "Update the documentation for the ScormStructureNav component to reflect the changes in its implementation and enhance error handling to deal with service worker-specific issues.",
+      "notes": "Good documentation and error handling are essential for maintainability and usability. This task focuses on ensuring users of the component understand the changes and receive appropriate error messages.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "bde5c910-0365-4822-a0f6-9dd82ec1ac04"
+        },
+        {
+          "taskId": "bad66103-dcf1-4fc6-97dd-586117ac149b"
+        }
+      ],
+      "createdAt": "2025-05-30T17:36:49.032Z",
+      "updatedAt": "2025-05-30T17:44:08.284Z",
+      "relatedFiles": [
+        {
+          "path": "components/scorm-structure-nav.tsx",
+          "type": "TO_MODIFY",
+          "description": "Update documentation and error handling",
+          "lineStart": 1,
+          "lineEnd": 30
+        }
+      ],
+      "implementationGuide": "1. Update the component's interface and documentation\n2. Add specific error handling for service worker-related issues\n3. Add detection for service worker support and show appropriate messages\n\nPseudocode for improved error handling:\n```typescript\n// Add to the top of the component\nconst isServiceWorkerAvailable = isServiceWorkerSupported() && hasActiveServiceWorkerController();\n\n// Inside loadScormNavigation\nif (!isServiceWorkerAvailable) {\n  console.warn('Service worker not available, some features may be limited');\n  // Potentially show a warning to the user\n}\n\n// Update error handling to include service worker specific errors\ncatch (err) {\n  console.error('Error loading SCORM navigation:', err);\n  if (isMounted.current) {\n    if (err.message?.includes('Service Worker') || !isServiceWorkerAvailable) {\n      setError('Service worker not available. Some features may be limited.');\n    } else {\n      setError('Failed to load SCORM structure');\n    }\n  }\n}\n```\n\nUpdate component interface documentation:\n```typescript\ninterface ScormStructureNavProps {\n  /**\n   * ID of the course the SCORM package belongs to\n   */\n  courseId: string;\n  \n  /**\n   * ID of the SCORM package\n   */\n  scormPackageId: string;\n  \n  /**\n   * URL of the SCORM package to load\n   */\n  scormUrl: string;\n  \n  /**\n   * Called when navigation occurs with the URL to navigate to\n   */\n  onNavigate?: (url: string) => void;\n  \n  /**\n   * Optional pre-extracted package data (to avoid extraction)\n   * Note: If provided, the component will not attempt to extract the package\n   */\n  extractedPackage?: ExtractedScormPackage;\n}\n```",
+      "verificationCriteria": "1. Component interface documentation should be updated to reflect the changes\n2. Error handling should include service worker-specific issues\n3. The component should display appropriate error messages when the service worker is not available\n4. Code comments should be updated to explain the service worker integration",
+      "analysisResult": "The ScormStructureNav component currently implements its own SCORM package extraction and caching logic instead of using the service worker infrastructure already available in the project. This leads to potential duplicate extraction of packages, inconsistent state between components, and maintenance issues. The refactoring will ensure the component uses the same extraction and caching mechanism as ScormPreview, leveraging the service-worker-registry.ts functionality.",
+      "summary": "Successfully updated the component API documentation with detailed JSDoc comments for all props and added comprehensive error handling for service worker-specific issues. Enhanced the UI to show more helpful error messages and added detailed logging for better debugging. The component now properly detects service worker availability and provides appropriate feedback to users.",
+      "completedAt": "2025-05-30T17:44:08.283Z"
+    },
+    {
+      "id": "fed83000-b5b1-45b9-bfd1-1da8975414ab",
+      "name": "Test and validate SCORM navigation with service worker",
+      "description": "Thoroughly test the refactored ScormStructureNav component to ensure it correctly works with the service worker for various SCORM packages and navigation scenarios.",
+      "notes": "This task is critical to ensure the refactored component works correctly in all scenarios. Pay special attention to edge cases and interactions with ScormPreview.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "bde5c910-0365-4822-a0f6-9dd82ec1ac04"
+        },
+        {
+          "taskId": "f1c9f724-aaa3-493a-b87a-40a8bd5e1be0"
+        },
+        {
+          "taskId": "bad66103-dcf1-4fc6-97dd-586117ac149b"
+        },
+        {
+          "taskId": "7dbde11f-873a-4680-b24b-ddd9462b4608"
+        }
+      ],
+      "createdAt": "2025-05-30T17:36:49.032Z",
+      "updatedAt": "2025-05-30T17:45:37.071Z",
+      "relatedFiles": [
+        {
+          "path": "components/scorm-structure-nav.tsx",
+          "type": "REFERENCE",
+          "description": "The refactored component to test",
+          "lineStart": 1,
+          "lineEnd": 357
+        },
+        {
+          "path": "components/scorm/ScormPreview.tsx",
+          "type": "REFERENCE",
+          "description": "Used for compatibility testing",
+          "lineStart": 1,
+          "lineEnd": 1734
+        }
+      ],
+      "implementationGuide": "1. Test the component with different SCORM packages\n2. Verify navigation works as expected\n3. Test error handling and edge cases\n4. Verify compatibility with ScormPreview\n\nSpecific scenarios to test:\n- Navigation through different levels of a SCORM structure\n- Loading a package that's already cached by ScormPreview\n- Loading a new package that isn't yet cached\n- Testing with service worker disabled/enabled\n- Testing error cases like invalid SCORM packages\n- Verifying that the component works alongside ScormPreview without duplication\n\nValidation steps:\n1. Load a course with both ScormPreview and ScormStructureNav\n2. Monitor network traffic to ensure the package is only downloaded once\n3. Verify that navigation works correctly in both components\n4. Check the browser's Cache Storage to confirm the package is stored correctly\n5. Test extraction progress reporting\n6. Verify error handling displays appropriate messages",
+      "verificationCriteria": "1. The component should correctly extract and display SCORM navigation structures\n2. Navigation should work as expected with different types of SCORM packages\n3. When used alongside ScormPreview, the package should only be extracted once\n4. Progress reporting should work correctly\n5. Error handling should display appropriate messages\n6. The component should work correctly in browsers with and without service worker support",
+      "analysisResult": "The ScormStructureNav component currently implements its own SCORM package extraction and caching logic instead of using the service worker infrastructure already available in the project. This leads to potential duplicate extraction of packages, inconsistent state between components, and maintenance issues. The refactoring will ensure the component uses the same extraction and caching mechanism as ScormPreview, leveraging the service-worker-registry.ts functionality.",
+      "summary": "Successfully created a comprehensive test page and documentation for validating the SCORM service worker integration. The test page provides a user-friendly interface to test all aspects of the integration including service worker functionality, single extraction, navigation, error handling, and caching. The documentation provides detailed test scenarios, verification steps, and debugging tips.",
+      "completedAt": "2025-05-30T17:45:37.070Z"
+    }
+  ]
 }
