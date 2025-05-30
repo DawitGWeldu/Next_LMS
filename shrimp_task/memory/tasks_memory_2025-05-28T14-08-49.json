@@ -1,0 +1,86 @@
+{
+  "tasks": [
+    {
+      "id": "ee0acc9c-92c0-45b5-852a-361c29e719b1",
+      "name": "Develop Client-Side SCORM Manifest Parsing Utility",
+      "description": "Create an async function `getClientScormPreviewDetails(file: File)` in `lib/scorm.ts` that uses JSZip to read `imsmanifest.xml` from the provided .zip file and DOMParser to extract basic SCORM metadata (title, version, entry point).",
+      "notes": "The function should be optimized for browser environments and handle various SCORM package formats. Use the existing validation logic from createClientSideValidator but extend it to extract more detailed metadata.",
+      "status": "completed",
+      "dependencies": [],
+      "createdAt": "2025-05-28T13:12:22.472Z",
+      "updatedAt": "2025-05-28T13:17:50.443Z",
+      "relatedFiles": [
+        {
+          "path": "lib/scorm.ts",
+          "type": "TO_MODIFY",
+          "description": "Add the getClientScormPreviewDetails function to this file"
+        }
+      ],
+      "implementationGuide": "1. Use the existing `createClientSideValidator()` function in lib/scorm.ts as a base\n2. Create a new function called `getClientScormPreviewDetails` that:\n   - Takes a File object as input\n   - Uses JSZip to open and read the zip file\n   - Checks for the imsmanifest.xml file\n   - Extracts and parses the manifest using the client-side XML parser\n   - Returns an object with metadata (title, description, version, entryPoint, manifestPath)\n3. Handle errors appropriately with descriptive error messages\n4. Ensure the function works in browser environments\n\nExample pseudocode structure:\n```typescript\nexport async function getClientScormPreviewDetails(file: File): Promise<{\n  isValid: boolean;\n  metadata?: ScormMetadata;\n  error?: string;\n}> {\n  try {\n    // Use JSZip to load the file\n    const zip = await JSZip.loadAsync(file);\n    \n    // Check for imsmanifest.xml\n    const manifestFile = zip.file('imsmanifest.xml');\n    if (!manifestFile) {\n      return { isValid: false, error: 'Missing imsmanifest.xml file' };\n    }\n    \n    // Extract and parse manifest\n    // ...\n    \n    // Return metadata\n    return {\n      isValid: true,\n      metadata: {\n        title: extractedTitle,\n        description: extractedDescription,\n        version: mappedScormVersion,\n        entryPoint: entryPointPath,\n        manifestPath: 'imsmanifest.xml'\n      }\n    };\n  } catch (error) {\n    return { \n      isValid: false, \n      error: `Failed to process SCORM package: ${error instanceof Error ? error.message : String(error)}`\n    };\n  }\n}\n```",
+      "verificationCriteria": "1. Function successfully extracts metadata from valid SCORM packages\n2. Function properly handles errors for invalid packages\n3. Function returns the correct version, title, and entry point information\n4. Function can handle both SCORM 1.2 and SCORM 2004 formats",
+      "analysisResult": "Fix the SCORM package import functionality in the LMS application to properly validate SCORM packages client-side, extract metadata from the imsmanifest.xml file, and display a preview of package contents before allowing course creation.",
+      "summary": "Successfully implemented the getClientScormPreviewDetails function in lib/scorm.ts that processes SCORM packages client-side, extracts metadata from imsmanifest.xml, and provides comprehensive validation with proper error handling.",
+      "completedAt": "2025-05-28T13:17:50.412Z"
+    },
+    {
+      "id": "84888e54-64f9-45a7-813b-70f55b5b715d",
+      "name": "Refactor ScormUpload Component for Pre-Upload Validation",
+      "description": "Modify `components/scorm-upload.tsx` to use a controlled file input and the new parsing utility before initiating an UploadThing upload. It will pass preview data or errors to its parent.",
+      "notes": "This component needs to handle all validation, preview, and upload states seamlessly. Use consistent error handling and provide good user feedback throughout the process.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "ee0acc9c-92c0-45b5-852a-361c29e719b1"
+        }
+      ],
+      "createdAt": "2025-05-28T13:12:22.472Z",
+      "updatedAt": "2025-05-28T13:21:13.737Z",
+      "relatedFiles": [
+        {
+          "path": "components/scorm-upload.tsx",
+          "type": "TO_MODIFY",
+          "description": "Modify this component to implement client-side validation before upload"
+        },
+        {
+          "path": "lib/uploadthing.ts",
+          "type": "REFERENCE",
+          "description": "Refer to this file for the useUploadThing hook implementation"
+        }
+      ],
+      "implementationGuide": "1. Refactor ScormUpload component to use a controlled file input instead of UploadDropzone directly\n2. When a file is selected, call the new getClientScormPreviewDetails utility\n3. Only if the package is valid, proceed with UploadThing upload\n4. Display appropriate UI states for validation, uploading, success, and error\n5. Pass extracted metadata to parent through the onScormData callback\n\nPseudocode structure:\n```tsx\nexport const ScormUpload = ({\n  onChange,\n  onScormData,\n  onValidationError,\n  isDisabled = false\n}: ScormUploadProps) => {\n  const [isUploading, setIsUploading] = useState(false);\n  const [isValidating, setIsValidating] = useState(false);\n  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);\n  const [error, setError] = useState<string | null>(null);\n  const [selectedFile, setSelectedFile] = useState<File | null>(null);\n  const [previewData, setPreviewData] = useState<ScormMetadata | null>(null);\n  \n  const { startUpload } = useUploadThing('scormPackage');\n  \n  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {\n    const file = e.target.files?.[0];\n    if (!file) return;\n    \n    setSelectedFile(file);\n    setIsValidating(true);\n    setError(null);\n    \n    try {\n      const result = await getClientScormPreviewDetails(file);\n      \n      if (result.isValid && result.metadata) {\n        setPreviewData(result.metadata);\n        onScormData?.(result.metadata);\n        // Continue with upload\n        handleUpload(file);\n      } else {\n        setError(result.error || 'Invalid SCORM package');\n        onValidationError?.(result.error || 'Invalid SCORM package');\n      }\n    } catch (error) {\n      // Handle error\n    } finally {\n      setIsValidating(false);\n    }\n  };\n  \n  const handleUpload = async (file: File) => {\n    setIsUploading(true);\n    \n    try {\n      const uploadResult = await startUpload([file]);\n      \n      if (uploadResult && uploadResult[0]) {\n        setUploadedUrl(uploadResult[0].url);\n        onChange(uploadResult[0].url);\n      }\n    } catch (error) {\n      // Handle upload error\n    } finally {\n      setIsUploading(false);\n    }\n  };\n  \n  // Render file input, validation state, preview, upload state, etc.\n}\n```",
+      "verificationCriteria": "1. Component validates SCORM packages client-side before uploading\n2. Component displays appropriate loading/error states\n3. Component correctly passes metadata to parent\n4. Component handles file selection and upload seamlessly\n5. Component provides good user feedback throughout the process",
+      "analysisResult": "Fix the SCORM package import functionality in the LMS application to properly validate SCORM packages client-side, extract metadata from the imsmanifest.xml file, and display a preview of package contents before allowing course creation.",
+      "summary": "Successfully refactored the ScormUpload component to validate SCORM packages client-side using the new getClientScormPreviewDetails function. Implemented a controlled file input, proper validation states, metadata preview, and seamless upload flow with better error handling.",
+      "completedAt": "2025-05-28T13:21:13.736Z"
+    },
+    {
+      "id": "5c93471e-3ca3-4520-aa63-8937de19db34",
+      "name": "Update ScormImportPage for Client-Side Preview and Deferred Upload",
+      "description": "Modify `/teacher/import-scorm/page.tsx` to manage the client-side preview, display information/errors, and handle the deferred UploadThing upload followed by form submission.",
+      "notes": "The import page should provide a seamless experience from upload to preview to form submission. Ensure that the extracted metadata is displayed clearly, and users understand what they're about to import.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "ee0acc9c-92c0-45b5-852a-361c29e719b1"
+        },
+        {
+          "taskId": "84888e54-64f9-45a7-813b-70f55b5b715d"
+        }
+      ],
+      "createdAt": "2025-05-28T13:12:22.472Z",
+      "updatedAt": "2025-05-28T13:23:18.180Z",
+      "relatedFiles": [
+        {
+          "path": "app/(protected)/(dashboard)/(routes)/teacher/import-scorm/page.tsx",
+          "type": "TO_MODIFY",
+          "description": "Modify this page to handle client-side validation and preview"
+        }
+      ],
+      "implementationGuide": "1. Update the import page to display preview information from client-side validation\n2. Add a preview section showing extracted metadata (title, description, version)\n3. Only enable the submit button when validation is successful\n4. Use the existing form structure but enhance it with preview and feedback\n\nPseudocode structure:\n```tsx\nconst ScormImportPage = () => {\n  // Existing state and form setup\n  const [previewData, setPreviewData] = useState<ScormMetadata | null>(null);\n  const [validationError, setValidationError] = useState<string | null>(null);\n  \n  const handleScormData = (data: ScormMetadata) => {\n    setPreviewData(data);\n    // Update form fields with extracted data\n    form.setValue('title', data.title, { shouldValidate: true });\n    // ...\n  };\n  \n  const handleValidationError = (error: string) => {\n    setValidationError(error);\n    // Clear form fields\n    // ...\n  };\n  \n  return (\n    <div>\n      {/* Form with ScormUpload component */}\n      <FormField\n        name=\"originalZipUrl\"\n        render={({ field }) => (\n          <FormItem>\n            <FormLabel>SCORM Package (.zip)</FormLabel>\n            <FormControl>\n              <ScormUpload\n                onChange={(url) => {\n                  field.onChange(url);\n                  setScormFileUrl(url);\n                }}\n                onScormData={handleScormData}\n                onValidationError={handleValidationError}\n                isDisabled={isSubmitting}\n              />\n            </FormControl>\n            {validationError && (\n              <div className=\"text-red-500\">{validationError}</div>\n            )}\n          </FormItem>\n        )}\n      />\n      \n      {/* Preview section */}\n      {previewData && (\n        <div className=\"mt-4 p-4 border rounded bg-slate-50\">\n          <h3 className=\"text-lg font-semibold\">SCORM Package Preview</h3>\n          <div className=\"grid grid-cols-2 gap-2 mt-2\">\n            <div>\n              <span className=\"font-medium\">Title:</span> {previewData.title}\n            </div>\n            <div>\n              <span className=\"font-medium\">Version:</span> {previewData.version}\n            </div>\n            {/* Other metadata */}\n          </div>\n        </div>\n      )}\n      \n      {/* Rest of the form */}\n    </div>\n  );\n};\n```",
+      "verificationCriteria": "1. Page correctly displays preview information from client-side validation\n2. Page provides appropriate feedback for validation errors\n3. Submit button is only enabled when validation is successful\n4. Form submission correctly includes all necessary SCORM metadata\n5. User experience is seamless from upload to preview to submission",
+      "analysisResult": "Fix the SCORM package import functionality in the LMS application to properly validate SCORM packages client-side, extract metadata from the imsmanifest.xml file, and display a preview of package contents before allowing course creation.",
+      "summary": "Successfully updated the ScormImportPage with an enhanced user interface that displays detailed SCORM package metadata, provides clear validation feedback, and implements a structured workflow from file selection through validation to course creation.",
+      "completedAt": "2025-05-28T13:23:18.179Z"
+    }
+  ]
+}

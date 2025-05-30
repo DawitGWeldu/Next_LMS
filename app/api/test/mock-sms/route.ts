@@ -44,3 +44,7 @@ export async function POST(req: Request) {
     return new NextResponse("Internal Error", { status: 500 });
   }
 } 
+
+// This is a dummy export to satisfy Next.js build process
+// See: https://github.com/vercel/next.js/discussions/48724
+export const dynamic = "force-dynamic";

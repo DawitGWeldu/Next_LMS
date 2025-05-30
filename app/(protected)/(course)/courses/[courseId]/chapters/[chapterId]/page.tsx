@@ -40,7 +40,6 @@ const ChapterIdPage = async ({
     return redirect("/")
   }
 
-
   const isLocked = !chapter.isFree && !purchase;
   const completeOnEnd = !!purchase && !userProgress?.isCompleted;
 
@@ -60,15 +59,25 @@ const ChapterIdPage = async ({
       )}
       <div className="flex flex-col max-w-4xl mx-auto pb-20">
         <div className="p-4">
-          <VideoPlayer
-            chapterId={params.chapterId}
-            title={chapter.title}
-            courseId={params.courseId}
-            nextChapterId={nextChapter?.id}
-            playbackId={muxData?.playbackId!}
-            isLocked={isLocked}
-            completeOnEnd={completeOnEnd}
-          />
+          {muxData?.playbackId ? (
+            <VideoPlayer
+              chapterId={params.chapterId}
+              title={chapter.title}
+              courseId={params.courseId}
+              nextChapterId={nextChapter?.id}
+              playbackId={muxData.playbackId}
+              isLocked={isLocked}
+              completeOnEnd={completeOnEnd}
+            />
+          ) : (
+            <div className="relative aspect-video">
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-800 text-secondary">
+                <p className="text-center p-4">
+                  This chapter has no video.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
         <div>
           <div className="p-4 flex flex-col md:flex-row items-center justify-between">

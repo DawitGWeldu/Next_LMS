@@ -1,0 +1,234 @@
+{
+  "tasks": [
+    {
+      "id": "43009cca-d786-4551-87e6-413864f8d9f7",
+      "name": "Modify CourseCard for SCORM courses display",
+      "description": "Update the CourseCard component to properly display SCORM-specific information and visually differentiate SCORM courses from regular courses in the search results.",
+      "notes": "This component is used throughout the application to display course cards in search results and dashboards.",
+      "status": "completed",
+      "dependencies": [],
+      "createdAt": "2025-05-28T17:00:15.008Z",
+      "updatedAt": "2025-05-28T17:03:23.034Z",
+      "relatedFiles": [
+        {
+          "path": "components/course-card.tsx",
+          "type": "TO_MODIFY",
+          "description": "The CourseCard component that needs to be modified to handle SCORM courses"
+        },
+        {
+          "path": "lib/course-utils.ts",
+          "type": "REFERENCE",
+          "description": "Contains the isScormCourse utility function that can be reused"
+        }
+      ],
+      "implementationGuide": "1. Modify the CourseCard component to accept an 'isScormCourse' prop\n2. Import the Badge component to add a SCORM badge\n3. Display appropriate metadata for SCORM courses (replacing chapter count)\n4. Use conditional rendering to show different information based on course type\n5. Ensure backward compatibility with existing code",
+      "verificationCriteria": "1. CourseCard should correctly display a SCORM badge for SCORM courses\n2. Appropriate metadata should be shown instead of chapter count for SCORM courses\n3. Existing functionality for regular courses should be preserved\n4. The component should be visually consistent with the existing UI",
+      "analysisResult": "The SCORM implementation needs improvements in two main areas: (1) properly displaying SCORM courses in the search page and (2) implementing a functional SCORM player with course structure navigation. The existing code already has SCORM parsing functionality that extracts course structure data from manifest files, which can be leveraged for the navigation panel.",
+      "summary": "Successfully updated the CourseCard component to properly display SCORM-specific information. Added an isScormCourse prop with a default value of false to maintain backward compatibility. Implemented a SCORM badge using the Badge component with the same styling as seen in other parts of the application. Changed the icon from BookOpen to FileArchive for SCORM courses and updated the text to show \"Interactive Package\" instead of chapter count. Maintained all existing functionality for regular courses.",
+      "completedAt": "2025-05-28T17:03:23.032Z"
+    },
+    {
+      "id": "1e7281bd-bf5b-4c65-93eb-d993a3f20fbf",
+      "name": "Update CoursesList to include SCORM course information",
+      "description": "Modify the CoursesList component to pass SCORM course data to the CourseCard components and ensure proper typing.",
+      "notes": "This will ensure that the CourseCard components can properly identify and display SCORM courses.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "43009cca-d786-4551-87e6-413864f8d9f7"
+        }
+      ],
+      "createdAt": "2025-05-28T17:00:15.008Z",
+      "updatedAt": "2025-05-28T17:03:52.775Z",
+      "relatedFiles": [
+        {
+          "path": "components/courses-list.tsx",
+          "type": "TO_MODIFY",
+          "description": "The CoursesList component that displays a grid of course cards"
+        },
+        {
+          "path": "lib/course-utils.ts",
+          "type": "REFERENCE",
+          "description": "Contains the WithScormPackage type utility and isScormCourse function"
+        }
+      ],
+      "implementationGuide": "1. Update the CourseWithProgressWithCategory type to include scormPackage relation\n2. Modify the CoursesList component to pass isScormCourse prop to CourseCard\n3. Use the isScormCourse utility function to determine course type\n4. Ensure proper typing throughout the component",
+      "verificationCriteria": "1. CoursesList should correctly pass SCORM course data to CourseCard components\n2. Type definitions should be correct and complete\n3. No TypeScript errors should be present\n4. The component should maintain its existing functionality",
+      "analysisResult": "The SCORM implementation needs improvements in two main areas: (1) properly displaying SCORM courses in the search page and (2) implementing a functional SCORM player with course structure navigation. The existing code already has SCORM parsing functionality that extracts course structure data from manifest files, which can be leveraged for the navigation panel.",
+      "summary": "Successfully updated the CoursesList component to include SCORM course information. Added ScormPackage to the imports from @prisma/client. Updated the CourseWithProgressWithCategory type to include the scormPackage relation. Imported the isScormCourse utility function from lib/course-utils.ts. Modified the CourseCard component invocation to pass the isScormCourse prop, using the isScormCourse utility function to determine the course type.",
+      "completedAt": "2025-05-28T17:03:52.774Z"
+    },
+    {
+      "id": "eb8fd378-845f-46d4-b480-68ba0ec0687b",
+      "name": "Modify getCourses action to include SCORM package data",
+      "description": "Update the getCourses action to include the scormPackage relation in the course data returned from the database.",
+      "notes": "This will make SCORM package data available to the CoursesList and CourseCard components.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "1e7281bd-bf5b-4c65-93eb-d993a3f20fbf"
+        }
+      ],
+      "createdAt": "2025-05-28T17:00:15.009Z",
+      "updatedAt": "2025-05-28T17:04:51.674Z",
+      "relatedFiles": [
+        {
+          "path": "actions/get-courses.ts",
+          "type": "TO_MODIFY",
+          "description": "The action that fetches courses for display in the search page"
+        }
+      ],
+      "implementationGuide": "1. Locate the getCourses action in the actions directory\n2. Add scormPackage to the include clause in the Prisma query\n3. Ensure proper typing for the returned data\n4. Maintain backward compatibility with existing code",
+      "verificationCriteria": "1. The getCourses action should include scormPackage data in its query\n2. Types should be correctly defined\n3. No errors should occur when fetching courses\n4. Performance should not be significantly impacted",
+      "analysisResult": "The SCORM implementation needs improvements in two main areas: (1) properly displaying SCORM courses in the search page and (2) implementing a functional SCORM player with course structure navigation. The existing code already has SCORM parsing functionality that extracts course structure data from manifest files, which can be leveraged for the navigation panel.",
+      "summary": "Successfully updated the getCourses and getDashboardCourses actions to include SCORM package data. Added ScormPackage to the imports from @prisma/client in both files. Updated the type definitions to include the scormPackage relation in the CourseWithProgressWithCategory interface. Modified the Prisma queries to include scormPackage: true in the include clause. The getCourse action already included the scormPackage relation, so no changes were needed there.",
+      "completedAt": "2025-05-28T17:04:51.673Z"
+    },
+    {
+      "id": "fb7211d0-8a77-4ce9-b253-c7cd4c0e8b55",
+      "name": "Fix SCORM player infinite loop issue",
+      "description": "Resolve the infinite loop issue in the SCORM player component and ensure proper loading of SCORM content.",
+      "notes": "The infinite loop might be caused by state updates triggering re-renders that cause further state updates.",
+      "status": "completed",
+      "dependencies": [],
+      "createdAt": "2025-05-28T17:00:15.009Z",
+      "updatedAt": "2025-05-28T17:06:29.544Z",
+      "relatedFiles": [
+        {
+          "path": "components/scorm-player.tsx",
+          "type": "TO_MODIFY",
+          "description": "The component responsible for rendering SCORM content in an iframe"
+        }
+      ],
+      "implementationGuide": "1. Analyze the current ScormPlayer component to identify the cause of the infinite loop\n2. Fix the useEffect dependency array and loading logic\n3. Ensure proper error handling\n4. Add appropriate loading states\n5. Test with different SCORM packages",
+      "verificationCriteria": "1. The SCORM player should load content without infinite loops\n2. Proper loading states should be displayed\n3. Errors should be handled gracefully\n4. Performance should be acceptable",
+      "analysisResult": "The SCORM implementation needs improvements in two main areas: (1) properly displaying SCORM courses in the search page and (2) implementing a functional SCORM player with course structure navigation. The existing code already has SCORM parsing functionality that extracts course structure data from manifest files, which can be leveraged for the navigation panel.",
+      "summary": "Successfully fixed the SCORM player infinite loop issue by addressing several problems in the component. Added proper state management with isMounted refs to prevent state updates after unmounting. Corrected the API route path to include the courseId parameter, which was missing in the original implementation. Split the iframe load event handling into a separate useEffect to avoid re-renders in the main effect. Added better error handling and loading state management. Updated the dependency array to include courseId, which was previously missing. Also updated the CourseScormPlayer component to pass the required courseId prop to ScormPlayer.",
+      "completedAt": "2025-05-28T17:06:29.542Z"
+    },
+    {
+      "id": "56c23e9d-37ab-41f9-91e8-895a95e895bb",
+      "name": "Create SCORM course structure component",
+      "description": "Create a new component to display the SCORM course structure as a navigation sidebar, similar to the chapter list for regular courses.",
+      "notes": "This component will be used to display the hierarchical structure of a SCORM course and allow navigation between different parts of the content.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "fb7211d0-8a77-4ce9-b253-c7cd4c0e8b55"
+        }
+      ],
+      "createdAt": "2025-05-28T17:00:15.009Z",
+      "updatedAt": "2025-05-28T17:08:55.416Z",
+      "relatedFiles": [
+        {
+          "path": "components/scorm-structure-nav.tsx",
+          "type": "CREATE",
+          "description": "New component to display SCORM course structure"
+        },
+        {
+          "path": "lib/scorm.ts",
+          "type": "REFERENCE",
+          "description": "Contains the SCORM manifest parsing functionality"
+        },
+        {
+          "path": "app/(protected)/(course)/courses/[courseId]/chapters/[chapterId]/_components/course-sidebar.tsx",
+          "type": "REFERENCE",
+          "description": "Reference for sidebar UI pattern"
+        }
+      ],
+      "implementationGuide": "1. Create a new component called ScormStructureNav\n2. Fetch and parse the SCORM manifest data to extract the course structure\n3. Implement a tree-like UI for displaying organizations and items\n4. Style the component to match the existing chapter list sidebar\n5. Add interactivity to allow navigation between different SCOs",
+      "verificationCriteria": "1. The component should correctly display the SCORM course structure\n2. The UI should be consistent with the existing chapter list sidebar\n3. Navigation between different SCOs should work correctly\n4. The component should handle different SCORM course structures",
+      "analysisResult": "The SCORM implementation needs improvements in two main areas: (1) properly displaying SCORM courses in the search page and (2) implementing a functional SCORM player with course structure navigation. The existing code already has SCORM parsing functionality that extracts course structure data from manifest files, which can be leveraged for the navigation panel.",
+      "summary": "Successfully created the ScormStructureNav component for displaying SCORM course structure as a navigation sidebar. Implemented a tree-like UI for organizations and items with proper expand/collapse functionality. Added an API endpoint to fetch the SCORM structure data from the server. Created consistent styling with the existing chapter list sidebar. Added interactive navigation between different SCOs via URL query parameters. Handled loading states, errors, and empty course structures. The component uses icons to differentiate between folders and content items.",
+      "completedAt": "2025-05-28T17:08:55.414Z"
+    },
+    {
+      "id": "c04f952d-35ff-4847-a684-284560b761ab",
+      "name": "Create SCORM content navigation API",
+      "description": "Create an API endpoint to fetch the SCORM course structure data and handle navigation between different SCOs.",
+      "notes": "This API will be used by the SCORM structure navigation component to fetch course structure data.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "56c23e9d-37ab-41f9-91e8-895a95e895bb"
+        }
+      ],
+      "createdAt": "2025-05-28T17:00:15.009Z",
+      "updatedAt": "2025-05-28T17:10:28.570Z",
+      "relatedFiles": [
+        {
+          "path": "app/api/courses/[courseId]/scorm-structure/route.ts",
+          "type": "CREATE",
+          "description": "New API endpoint for SCORM course structure"
+        },
+        {
+          "path": "lib/scorm.ts",
+          "type": "REFERENCE",
+          "description": "Contains the SCORM manifest parsing functionality"
+        }
+      ],
+      "implementationGuide": "1. Create a new API endpoint in the api/courses/[courseId]/scorm-structure route\n2. Implement functionality to extract and return the SCORM course structure\n3. Add support for navigating to specific SCOs\n4. Ensure proper error handling and validation\n5. Implement caching to improve performance",
+      "verificationCriteria": "1. The API should return correctly structured SCORM course data\n2. Error handling should be robust\n3. Performance should be acceptable, with proper caching\n4. Security measures should be in place to prevent unauthorized access",
+      "analysisResult": "The SCORM implementation needs improvements in two main areas: (1) properly displaying SCORM courses in the search page and (2) implementing a functional SCORM player with course structure navigation. The existing code already has SCORM parsing functionality that extracts course structure data from manifest files, which can be leveraged for the navigation panel.",
+      "summary": "Successfully created the SCORM content navigation API with two endpoints: one for fetching the course structure and another for navigating to specific SCOs. Implemented in-memory caching to improve performance with a 15-minute TTL. Added robust error handling for various failure scenarios. Implemented security checks to ensure only course owners or purchasers can access the data. Enhanced the ScormStructureNav component to use the new navigation API, with loading indicators and proper error handling. Added functionality to auto-expand parent items of the currently selected item.",
+      "completedAt": "2025-05-28T17:10:28.568Z"
+    },
+    {
+      "id": "e1b3fd2b-0ff7-48f7-90db-18cfc3b0292d",
+      "name": "Integrate SCORM structure navigation with player",
+      "description": "Integrate the SCORM structure navigation component with the SCORM player to create a complete learning experience.",
+      "notes": "This task combines the navigation component with the player to create a unified interface.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "c04f952d-35ff-4847-a684-284560b761ab"
+        }
+      ],
+      "createdAt": "2025-05-28T17:00:15.009Z",
+      "updatedAt": "2025-05-28T17:11:29.152Z",
+      "relatedFiles": [
+        {
+          "path": "components/course-scorm-player.tsx",
+          "type": "TO_MODIFY",
+          "description": "The component that wraps the SCORM player"
+        },
+        {
+          "path": "app/(protected)/(course)/courses/[courseId]/scorm/page.tsx",
+          "type": "TO_MODIFY",
+          "description": "The page that displays the SCORM course player"
+        }
+      ],
+      "implementationGuide": "1. Update the CourseScormPlayer component to use the ScormStructureNav component\n2. Implement state management to track the current SCO being displayed\n3. Add event handling for navigation between SCOs\n4. Create a layout similar to the chapter view for regular courses\n5. Ensure responsive design for different screen sizes",
+      "verificationCriteria": "1. The navigation sidebar should be properly integrated with the player\n2. Navigation between SCOs should work correctly\n3. The UI should be consistent with the chapter view for regular courses\n4. The design should be responsive and work on different screen sizes",
+      "analysisResult": "The SCORM implementation needs improvements in two main areas: (1) properly displaying SCORM courses in the search page and (2) implementing a functional SCORM player with course structure navigation. The existing code already has SCORM parsing functionality that extracts course structure data from manifest files, which can be leveraged for the navigation panel.",
+      "summary": "Successfully integrated the SCORM structure navigation component with the SCORM player. Updated the CourseScormPlayer component to include the ScormStructureNav sidebar with proper responsive design. Added state management to track the current SCO being displayed. Implemented a mobile-friendly layout with a toggle button for the sidebar. Updated the SCORM course page to match the chapter view layout with proper positioning of the navbar and content area. Added communication between the navigation component and the player through the onNavigate callback. Ensured a consistent user experience that matches the existing chapter view for regular courses.",
+      "completedAt": "2025-05-28T17:11:29.151Z"
+    },
+    {
+      "id": "53e4be0b-32d5-4ff8-a295-bae84af9ff15",
+      "name": "Update SCORM player to support SCO navigation",
+      "description": "Modify the SCORM player component to support navigation to specific SCOs based on user selection in the structure navigation.",
+      "notes": "This enhancement will allow users to navigate directly to specific parts of the SCORM content.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "e1b3fd2b-0ff7-48f7-90db-18cfc3b0292d"
+        }
+      ],
+      "createdAt": "2025-05-28T17:00:15.009Z",
+      "updatedAt": "2025-05-28T17:13:09.307Z",
+      "relatedFiles": [
+        {
+          "path": "components/scorm-player.tsx",
+          "type": "TO_MODIFY",
+          "description": "The component responsible for rendering SCORM content in an iframe"
+        }
+      ],
+      "implementationGuide": "1. Update the ScormPlayer component to accept a currentScoPath prop\n2. Modify the iframe loading logic to load the specified SCO\n3. Add support for communicating with the SCORM API across different SCOs\n4. Implement state persistence when navigating between SCOs\n5. Add visual feedback during SCO transitions",
+      "verificationCriteria": "1. The player should correctly load the specified SCO\n2. State should be preserved when navigating between SCOs\n3. The SCORM API communication should work across different SCOs\n4. Visual feedback should be provided during SCO transitions",
+      "analysisResult": "The SCORM implementation needs improvements in two main areas: (1) properly displaying SCORM courses in the search page and (2) implementing a functional SCORM player with course structure navigation. The existing code already has SCORM parsing functionality that extracts course structure data from manifest files, which can be leveraged for the navigation panel.",
+      "summary": "Successfully updated the SCORM player to support SCO navigation based on user selection. Added state tracking for the current content URL with a lastLoadedUrl ref to prevent unnecessary reloads. Implemented visual feedback during SCO transitions with different loading messages for initial load vs. navigation. Added detection of direct SCO URLs vs. package extraction URLs. Included a foundation for SCORM API communication across different SCOs with a tryConnectToScormApi function. Enhanced the loading state UI to be more informative and user-friendly.",
+      "completedAt": "2025-05-28T17:13:09.306Z"
+    }
+  ]
+}

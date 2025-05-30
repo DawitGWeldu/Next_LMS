@@ -1,0 +1,201 @@
+{
+  "tasks": [
+    {
+      "id": "14cf6a8f-0e71-458b-b064-440858eba722",
+      "name": "Refactor ScormContentProvider to use service worker for extraction",
+      "description": "Modify the ScormContentProvider component to use the service worker extraction mechanism instead of its own extraction logic, eliminating the duplicate download and storage.",
+      "notes": "Ensure backward compatibility with existing components that use ScormContentProvider. Maintain the same API structure while changing the underlying implementation.",
+      "status": "completed",
+      "dependencies": [],
+      "createdAt": "2025-05-29T12:54:36.995Z",
+      "updatedAt": "2025-05-29T13:05:30.188Z",
+      "relatedFiles": [
+        {
+          "path": "components/providers/scorm-content-provider.tsx",
+          "type": "TO_MODIFY",
+          "description": "Main file to be updated to use service worker extraction"
+        },
+        {
+          "path": "lib/client/service-worker-registry.ts",
+          "type": "REFERENCE",
+          "description": "Contains the service worker extraction functions to be used"
+        },
+        {
+          "path": "lib/client/scorm-extractor.ts",
+          "type": "REFERENCE",
+          "description": "Contains the current extraction logic to be replaced"
+        }
+      ],
+      "implementationGuide": "1. Analyze the current ScormContentProvider implementation in components/providers/scorm-content-provider.tsx\n2. Identify dependencies on lib/client/scorm-extractor.ts and lib/client/scorm-cache.ts\n3. Replace direct extraction logic with calls to service worker registry functions:\n   - Replace downloadAndExtractScorm/extractScormFromFile with extractAndWaitForCompletion\n   - Update the state management to handle service worker response structure\n   - Remove or comment out unused extraction methods\n4. Ensure consistent cache key generation between components\n5. Update types to match the service worker response format\n6. Keep the context API intact so depending components continue to work",
+      "verificationCriteria": "1. ScormContentProvider successfully loads SCORM content using the service worker\n2. No duplicate downloads occur when used alongside ScormPreview\n3. All existing components using ScormContentProvider continue to work\n4. Console logs should show extraction happening only once\n5. Browser storage shows package is stored only in Cache Storage, not in IndexedDB",
+      "analysisResult": "I will standardize the SCORM package extraction process in the LMS application by consolidating on the service worker approach, eliminating duplicate extraction code, removing redundant components, and ensuring consistent cache key generation.",
+      "summary": "Successfully refactored ScormContentProvider to use the service worker extraction mechanism. Updated the component to use extractAndWaitForCompletion from service-worker-registry.ts, created a ServiceWorkerFileMap class to bridge between the service worker cache and the expected ExtractedScormPackage format, and adapted the manifest structure to maintain compatibility with existing components. This eliminates duplicate downloads by ensuring both components use the same extraction method and cache storage.",
+      "completedAt": "2025-05-29T13:05:30.187Z"
+    },
+    {
+      "id": "f4060575-0a9d-42c7-9281-8c40c160f22c",
+      "name": "Create unified SCORM cache key generation utility",
+      "description": "Create a utility function for generating consistent cache keys across the application to ensure that different components reference the same cached SCORM package.",
+      "notes": "This will ensure that when a package is extracted by either component, the other can find it in the cache using the same key.",
+      "status": "completed",
+      "dependencies": [],
+      "createdAt": "2025-05-29T12:54:36.995Z",
+      "updatedAt": "2025-05-29T13:00:15.285Z",
+      "relatedFiles": [
+        {
+          "path": "lib/client/scorm-utils.ts",
+          "type": "CREATE",
+          "description": "New utility file for shared SCORM functions"
+        },
+        {
+          "path": "lib/client/service-worker-registry.ts",
+          "type": "TO_MODIFY",
+          "description": "Update to use new key generation utility"
+        },
+        {
+          "path": "components/providers/scorm-content-provider.tsx",
+          "type": "TO_MODIFY",
+          "description": "Update to use new key generation utility"
+        }
+      ],
+      "implementationGuide": "1. Review both cache key generation methods:\n   - ScormContentProvider: `cacheKey` function using courseId and URL\n   - Service worker registry: `createKeyFromUrl` function\n2. Create a unified utility in a shared location (e.g., lib/client/scorm-utils.ts)\n3. The utility should accept parameters like:\n   - URL of the SCORM package (required)\n   - Course ID (optional)\n   - SCORM package ID (optional)\n4. Implement logic to generate consistent keys regardless of which parameters are provided\n5. Update both ScormContentProvider and service worker registry to use this utility",
+      "verificationCriteria": "1. Both ScormContentProvider and service worker registry generate identical cache keys for the same SCORM package\n2. Key remains consistent across page refreshes\n3. Components can find cached content regardless of which component initiated the extraction\n4. Console logs show the same key being used throughout the system",
+      "analysisResult": "I will standardize the SCORM package extraction process in the LMS application by consolidating on the service worker approach, eliminating duplicate extraction code, removing redundant components, and ensuring consistent cache key generation.",
+      "summary": "Successfully created and implemented the unified SCORM cache key generation utility. Created a new lib/client/scorm-utils.ts file with a flexible generateScormCacheKey function that ensures consistent key generation across components. Updated ScormContentProvider, service-worker-registry.ts and service-worker-scorm.js to use the new utility, which will eliminate duplicate downloads by ensuring different components reference the same cached content.",
+      "completedAt": "2025-05-29T13:00:15.278Z"
+    },
+    {
+      "id": "2c54339c-907e-4ee0-829a-4e8f2274aea1",
+      "name": "Update CourseScormPlayer to use only service worker extraction",
+      "description": "Modify the CourseScormPlayer component to use only one method of SCORM extraction and avoid duplicate downloads and processing.",
+      "notes": "This component is the parent that contains both the ScormContentProvider and ScormPreview, so ensuring they work together without duplication is crucial.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "14cf6a8f-0e71-458b-b064-440858eba722"
+        },
+        {
+          "taskId": "f4060575-0a9d-42c7-9281-8c40c160f22c"
+        }
+      ],
+      "createdAt": "2025-05-29T12:54:36.995Z",
+      "updatedAt": "2025-05-29T13:12:42.716Z",
+      "relatedFiles": [
+        {
+          "path": "components/course-scorm-player.tsx",
+          "type": "TO_MODIFY",
+          "description": "Main component to be updated to avoid duplicate extraction"
+        }
+      ],
+      "implementationGuide": "1. Review current implementation in components/course-scorm-player.tsx\n2. Update the component to rely on ScormContentProvider for context and data\n3. If needed, adjust ScormPreview props to avoid triggering duplicate extractions\n4. Ensure only one extraction process is initiated when the component loads\n5. Pass a consistent package key from the parent component to both ScormContentProvider and ScormPreview\n6. Remove any redundant state or effects related to duplicate extraction",
+      "verificationCriteria": "1. CourseScormPlayer loads SCORM content with only one extraction process\n2. Network tab shows package is downloaded only once\n3. Console logs show only one extraction process\n4. Component functions normally with all features working",
+      "analysisResult": "I will standardize the SCORM package extraction process in the LMS application by consolidating on the service worker approach, eliminating duplicate extraction code, removing redundant components, and ensuring consistent cache key generation.",
+      "summary": "Successfully updated the CourseScormPlayer component to use only service worker extraction, eliminating duplicate downloads and processing. Modified the component to use a consistent cache key generated with the unified utility, updated ScormPreview to check if the package is already cached before extraction, and added proper cache reuse functionality. The implementation ensures that SCORM packages are only extracted once, improving performance and reducing storage usage.",
+      "completedAt": "2025-05-29T13:12:42.715Z"
+    },
+    {
+      "id": "988e090b-0458-45ff-b723-60b4b87ddf27",
+      "name": "Remove ScormStructureNav and enhance course chapter navigation",
+      "description": "Remove the redundant ScormStructureNav component and enhance the existing course chapter navigation to handle SCORM content structure.",
+      "notes": "Consider that the existing CourseSidebar is a server component while we need client-side functionality for SCORM navigation, so a wrapper approach might be needed.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "14cf6a8f-0e71-458b-b064-440858eba722"
+        }
+      ],
+      "createdAt": "2025-05-29T12:54:36.995Z",
+      "updatedAt": "2025-05-29T13:09:32.304Z",
+      "relatedFiles": [
+        {
+          "path": "components/scorm-structure-nav.tsx",
+          "type": "TO_MODIFY",
+          "description": "Component to be removed eventually"
+        },
+        {
+          "path": "app/(protected)/(course)/courses/[courseId]/_components/course-sidebar.tsx",
+          "type": "REFERENCE",
+          "description": "Existing course navigation to be referenced"
+        },
+        {
+          "path": "app/(protected)/(course)/courses/[courseId]/_components/scorm-course-sidebar.tsx",
+          "type": "CREATE",
+          "description": "New client component for SCORM course navigation"
+        },
+        {
+          "path": "components/course-scorm-player.tsx",
+          "type": "TO_MODIFY",
+          "description": "Update to use new navigation component"
+        }
+      ],
+      "implementationGuide": "1. Review current implementation of ScormStructureNav (components/scorm-structure-nav.tsx)\n2. Analyze the existing course sidebar navigation (app/(protected)/(course)/courses/[courseId]/_components/course-sidebar.tsx)\n3. Create a new client component wrapper for the course sidebar that can handle SCORM structure\n4. Extract useful parts from ScormStructureNav for rendering SCORM structure\n5. Update CourseScormPlayer to use the enhanced navigation instead of ScormStructureNav\n6. Delete the ScormStructureNav component after successfully updating all dependencies",
+      "verificationCriteria": "1. New navigation component successfully displays SCORM structure\n2. Navigation works correctly for users to move between SCORM items\n3. CourseScormPlayer functions properly with the new navigation\n4. ScormStructureNav component is fully removed from the codebase\n5. UI is consistent with the rest of the application",
+      "analysisResult": "I will standardize the SCORM package extraction process in the LMS application by consolidating on the service worker approach, eliminating duplicate extraction code, removing redundant components, and ensuring consistent cache key generation.",
+      "summary": "Successfully removed the redundant ScormStructureNav component and created a new ScormCourseSidebar component that integrates with the existing course navigation structure. The new component maintains all the functionality of the original while using the shared SCORM content context. Updated CourseScormPlayer to use the new component, resulting in a more consistent UI and eliminating duplicate extraction code.",
+      "completedAt": "2025-05-29T13:09:32.302Z"
+    },
+    {
+      "id": "5ebe0626-3a12-4137-9545-2579ac07566e",
+      "name": "Clean up service worker debugging code",
+      "description": "Remove temporary debugging code from the service worker implementation, focusing on the specific file search logic added during issue troubleshooting.",
+      "notes": "Be careful to preserve essential functionality while removing the debugging additions.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "14cf6a8f-0e71-458b-b064-440858eba722"
+        },
+        {
+          "taskId": "2c54339c-907e-4ee0-829a-4e8f2274aea1"
+        }
+      ],
+      "createdAt": "2025-05-29T12:54:36.995Z",
+      "updatedAt": "2025-05-29T13:31:48.128Z",
+      "relatedFiles": [
+        {
+          "path": "public/service-worker-scorm.js",
+          "type": "TO_MODIFY",
+          "description": "Service worker to be cleaned up"
+        }
+      ],
+      "implementationGuide": "1. Review the current service-worker-scorm.js implementation\n2. Identify and remove the temporary debugging code that was added:\n   - Special case handling for template.xml search\n   - File path case-insensitive matching and debugging logs\n   - Any other console.log statements added for debugging\n3. Keep the core functionality intact:\n   - Package extraction and caching\n   - File serving from cache\n   - Basic manifest parsing\n4. Ensure proper error handling remains in place\n5. Clean up any unused variables or functions",
+      "verificationCriteria": "1. Service worker continues to function correctly after cleanup\n2. SCORM packages are still properly extracted and cached\n3. Files are served correctly from the cache\n4. Console has fewer debugging logs\n5. Code is more maintainable and focused on core functionality",
+      "analysisResult": "I will standardize the SCORM package extraction process in the LMS application by consolidating on the service worker approach, eliminating duplicate extraction code, removing redundant components, and ensuring consistent cache key generation.",
+      "summary": "Successfully removed debugging code from SCORM components. Deleted numerous console.log statements in service-worker-scorm.js, ScormPreview.tsx, CourseScormPlayer.tsx, and ScormCourseSidebar components. Removed special case handling for template.xml and case-insensitive matching that was added during troubleshooting. Retained essential logs for service worker registration and error handling while eliminating verbose progress logging. This makes the codebase cleaner while maintaining the core functionality.",
+      "completedAt": "2025-05-29T13:31:48.124Z"
+    },
+    {
+      "id": "7bae7e4b-de04-442c-9176-bd877be207f3",
+      "name": "Optimize service worker cache usage",
+      "description": "Enhance the service worker to better manage cache storage, implementing size limits, expiration policies, and cleanup mechanisms for unused SCORM packages.",
+      "notes": "This optional enhancement will help prevent the cache from growing too large over time, especially when dealing with many large SCORM packages.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "14cf6a8f-0e71-458b-b064-440858eba722"
+        },
+        {
+          "taskId": "5ebe0626-3a12-4137-9545-2579ac07566e"
+        }
+      ],
+      "createdAt": "2025-05-29T12:54:36.995Z",
+      "updatedAt": "2025-05-29T15:54:27.008Z",
+      "relatedFiles": [
+        {
+          "path": "public/service-worker-scorm.js",
+          "type": "TO_MODIFY",
+          "description": "Service worker to be enhanced with cache management"
+        },
+        {
+          "path": "lib/client/service-worker-registry.ts",
+          "type": "TO_MODIFY",
+          "description": "Update to add cache management API functions"
+        }
+      ],
+      "implementationGuide": "1. Add cache management functionality to the service worker:\n   - Add size estimation for cached packages\n   - Implement an LRU (Least Recently Used) policy for cache eviction\n   - Create a cleanup mechanism for packages that haven't been accessed in a while\n2. Add an API for checking cache size and manually clearing unused packages\n3. Add timestamps to cached content to track when it was last accessed\n4. Update service worker message handling to support cache management commands\n5. Implement a background task to periodically check and clean cache",
+      "verificationCriteria": "1. Cache size is kept within reasonable limits\n2. Old/unused packages are automatically removed\n3. New packages can always be added without causing storage quota errors\n4. API functions work correctly for checking and managing cache\n5. Performance remains good even with many packages",
+      "analysisResult": "I will standardize the SCORM package extraction process in the LMS application by consolidating on the service worker approach, eliminating duplicate extraction code, removing redundant components, and ensuring consistent cache key generation.",
+      "summary": "Successfully enhanced the service worker with comprehensive cache management capabilities. Added size tracking with accurate estimation, implemented LRU and time-based eviction policies, created APIs for cache statistics and manual cleanup, added timestamps for tracking package access, and implemented a scheduled cleanup mechanism. The solution efficiently prevents cache overflow while preserving frequently used packages.",
+      "completedAt": "2025-05-29T15:54:27.007Z"
+    }
+  ]
+}

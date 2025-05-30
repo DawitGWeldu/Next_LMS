@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { Attachment, Chapter } from "@prisma/client";
+import { Attachment, Chapter, ScormPackage } from "@prisma/client";
 
 interface GetChapterProps {
   userId: string;
@@ -29,6 +29,7 @@ export const getChapter = async ({
       },
       select: {
         price: true,
+        scormPackage: true,
       }
     });
 
@@ -46,6 +47,7 @@ export const getChapter = async ({
     let muxData = null;
     let attachments: Attachment[] = [];
     let nextChapter: Chapter | null = null;
+    let scormPackage: ScormPackage | null = null;
 
     if (purchase) {
       attachments = await db.attachment.findMany({
@@ -53,6 +55,15 @@ export const getChapter = async ({
           courseId: courseId
         }
       });
+      
+      // Fetch SCORM package if course has one
+      if (course.scormPackage) {
+        scormPackage = await db.scormPackage.findUnique({
+          where: {
+            courseId: courseId,
+          }
+        });
+      }
     }
 
     if (chapter.isFree || purchase) {
@@ -93,6 +104,7 @@ export const getChapter = async ({
       nextChapter,
       userProgress,
       purchase,
+      scormPackage,
     };
   } catch (error) {
     console.log("[GET_CHAPTER]", error);
@@ -104,6 +116,7 @@ export const getChapter = async ({
       nextChapter: null,
       userProgress: null,
       purchase: null,
+      scormPackage: null,
     }
   }
 }

@@ -9,6 +9,9 @@ import { auth } from "@/auth";
 import { ThemeProvider } from "@/components/theme-provider"
 import { TailwindIndicator } from "@/components/tailwind-indicator"
 import { cn } from "@/lib/utils"
+import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
+import { extractRouterConfig } from "uploadthing/server";
+import { ourFileRouter } from "@/app/api/uploadthing/core";
 
 
 
@@ -42,6 +45,9 @@ export default async function RootLayout({
           fontSans.variable,
           fontHeading.variable
         )}>
+          <NextSSRPlugin 
+            routerConfig={extractRouterConfig(ourFileRouter)}
+          />
           <ConfettiProvider />
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
             <ToastProvider />

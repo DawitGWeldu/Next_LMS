@@ -1,0 +1,88 @@
+{
+  "tasks": [
+    {
+      "id": "e43aac77-0b18-4375-9bbf-fa508c60a4bf",
+      "name": "Develop Client-Side SCORM Manifest Parsing Utility",
+      "description": "Create an async function `getClientScormPreviewDetails(file: File)` in `lib/scorm.ts` that uses JSZip to read `imsmanifest.xml` from the provided .zip file and DOMParser to extract basic SCORM metadata (title, version, entry point).",
+      "status": "completed",
+      "dependencies": [],
+      "createdAt": "2025-05-28T08:11:46.912Z",
+      "updatedAt": "2025-05-28T08:15:24.662Z",
+      "relatedFiles": [
+        {
+          "path": "lib/scorm.ts",
+          "type": "TO_MODIFY",
+          "description": "Add new client-side parsing utility here."
+        }
+      ],
+      "implementationGuide": "1. Locate `lib/scorm.ts`. Add new exported async function `getClientScormPreviewDetails(file: File): Promise<{ title?: string, scormVersion?: ScormVersion, entryPoint?: string, error?: string, manifestPresent: boolean }>`.\n2. Use `JSZip.loadAsync(file)` to access zip contents.\n3. Attempt to read `imsmanifest.xml` as a string. If not found, return `{ manifestPresent: false, error: \"imsmanifest.xml not found\" }`.\n4. Parse the manifest string with `new DOMParser().parseFromString(manifestContent, 'text/xml')`.\n5. Extract: \n   - Title: Look for `<lom><general><title><langstring>` or `<organization><title>`.\n   - SCORM Version: Check `<manifest>` namespaces (e.g., `imscp_v1p1` for 2004, `imscp_rootv1p1p2` for 1.2) or `<metadata><schemaversion>`. Map to Prisma `ScormVersion` enum.\n   - Entry Point: Find `href` of first `<resource type=\"webcontent\">` referenced by first `<item>` in default `<organization>`, or simpler heuristic.\n6. Return `{ title, scormVersion, entryPoint, manifestPresent: true }` or an error object if parsing fails.",
+      "verificationCriteria": "Function correctly parses valid SCORM 1.2 and 2004 manifests. Returns accurate title, version, and entry point. Handles missing manifest or parse errors gracefully. Returns Prisma ScormVersion enum values.",
+      "analysisResult": "Implement client-side SCORM package validation and preview on `/teacher/import-scorm`. User selects .zip, browser uses JSZip to read, DOMParser to parse `imsmanifest.xml` for title, version, entry point. Preview this info. UploadThing upload occurs only after user confirmation based on preview. Modify `ScormUpload` and `ScormImportPage`.",
+      "summary": "Created the `getClientScormPreviewDetails` async function in `lib/scorm.ts`. This function takes a File object (the SCORM .zip package), uses JSZip to find and read `imsmanifest.xml`, and then employs the browser's `DOMParser` to extract the course title, SCORM version, and entry point/launch file. The function returns these details or an error message if the manifest is not found, cannot be parsed, or if key information is missing. It also exports a new `ScormPreviewDetails` interface for the return type.",
+      "completedAt": "2025-05-28T08:15:24.661Z"
+    },
+    {
+      "id": "51383e9d-d305-4d75-bccb-982c22e922c4",
+      "name": "Refactor ScormUpload Component for Pre-Upload Validation",
+      "description": "Modify `components/scorm-upload.tsx` to use a controlled file input and the new parsing utility before initiating an UploadThing upload. It will pass preview data or errors to its parent.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "e43aac77-0b18-4375-9bbf-fa508c60a4bf"
+        }
+      ],
+      "createdAt": "2025-05-28T08:11:46.912Z",
+      "updatedAt": "2025-05-28T08:17:18.929Z",
+      "relatedFiles": [
+        {
+          "path": "components/scorm-upload.tsx",
+          "type": "TO_MODIFY",
+          "description": "Refactor for client-side processing and controlled upload."
+        },
+        {
+          "path": "lib/scorm.ts",
+          "type": "REFERENCE",
+          "description": "Uses the new parsing utility."
+        }
+      ],
+      "implementationGuide": "1. Modify `ScormUpload`: Replace direct `UploadDropzone` with a custom file input (`<input type=\"file\" accept=\".zip\">`) and manage its state, or use a basic dropzone UI that gives access to the File object.\n2. Add a new prop: `onPreviewAvailable: (previewData: {title, version, entryPoint} | null, file: File | null, error?: string) => void;`. Remove or adapt existing `onScormData` and `validateScormPackage` (server-side call from here). The `onChange` prop (for UploadThing URL) will not be called from here directly after file selection anymore.\n3. On file selection: Set a local loading state (e.g., `isParsingFile`). Call `getClientScormPreviewDetails(selectedFile)`.\n4. Invoke `onPreviewAvailable` with the result (preview data and the `File` object, or an error). Clear loading state.\n5. The component itself will no longer initiate the UploadThing upload. It only provides the selected file and its preview data to the parent page.",
+      "verificationCriteria": "Component allows file selection. Calls parsing utility. Invokes `onPreviewAvailable` with correct data/error. Does not auto-upload to UploadThing. Displays parsing state.",
+      "analysisResult": "Implement client-side SCORM package validation and preview on `/teacher/import-scorm`. User selects .zip, browser uses JSZip to read, DOMParser to parse `imsmanifest.xml` for title, version, entry point. Preview this info. UploadThing upload occurs only after user confirmation based on preview. Modify `ScormUpload` and `ScormImportPage`.",
+      "summary": "Refactored `components/scorm-upload.tsx`. Replaced `UploadDropzone` with a custom file input and styled dropzone area (with drag-and-drop). On file selection, it now calls `getClientScormPreviewDetails` and passes the SCORM package preview data (or error) and the `File` object to the parent component via the new `onPreviewAvailable` prop. It no longer initiates uploads to UploadThing directly or performs server-side validation. Manages `isParsing` state and UI feedback for file selection, parsing, and errors. Added `currentFileUrl` and `onClearFile` props for better parent control.",
+      "completedAt": "2025-05-28T08:17:18.928Z"
+    },
+    {
+      "id": "c2d6983b-1b07-4a81-94fd-496b0698bd07",
+      "name": "Update ScormImportPage for Client-Side Preview and Deferred Upload",
+      "description": "Modify `/teacher/import-scorm/page.tsx` to manage the client-side preview, display information/errors, and handle the deferred UploadThing upload followed by form submission.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "e43aac77-0b18-4375-9bbf-fa508c60a4bf"
+        },
+        {
+          "taskId": "51383e9d-d305-4d75-bccb-982c22e922c4"
+        }
+      ],
+      "createdAt": "2025-05-28T08:11:46.912Z",
+      "updatedAt": "2025-05-28T08:19:13.925Z",
+      "relatedFiles": [
+        {
+          "path": "app/(protected)/(dashboard)/(routes)/teacher/import-scorm/page.tsx",
+          "type": "TO_MODIFY",
+          "description": "Integrate client-side validation, preview UI, and deferred upload logic."
+        },
+        {
+          "path": "components/scorm-upload.tsx",
+          "type": "REFERENCE",
+          "description": "Interacts with this modified component."
+        }
+      ],
+      "implementationGuide": "1. In `ScormImportPage`: Add state for `scormFileForUpload: File | null`, `previewData | null`, `previewError | null`, `isClientParsing: boolean`, `isUploadingToUT: boolean`.\n2. Initialize `useUploadThing` hook for the `scormPackage` endpoint.\n3. Pass `onPreviewAvailable` to `ScormUpload`. Update page state based on its callback.\n4. Display preview data (title, version, entry point) or errors. Show loading indicators for `isClientParsing` and `isUploadingToUT`.\n5. Modify form `onSubmit`: \n   a. If `!scormFileForUpload` or `!previewData`, show error and return.\n   b. Set `isUploadingToUT = true`. Call `startUpload([scormFileForUpload])` (from `useUploadThing`).\n   c. In `useUploadThing`'s `onClientUploadComplete(res)`: `const uploadedUrl = res[0].url; form.setValue(\"originalZipUrl\", uploadedUrl); form.setValue(\"title\", previewData.title); form.setValue(\"scormVersion\", previewData.scormVersion); form.setValue(\"entryPoint\", previewData.entryPoint); form.setValue(\"manifestPath\", \"imsmanifest.xml\"); await axios.post(\"/api/courses\", form.getValues()); setIsLoading(false); router.push(...); toast.success(...)`. Handle errors in `onUploadError`. Set `isUploadingToUT = false` in finally/error blocks.\n6. Disable form submit button based on state (e.g., if parsing, if no valid file/preview, if uploading).",
+      "verificationCriteria": "Page displays preview or errors from ScormUpload. UploadThing `startUpload` is called only in `onSubmit` if preview is valid. Form data (including previewed details and uploaded URL) is correctly sent to `/api/courses`. UI states (loading, errors, button disabled states) work correctly.",
+      "analysisResult": "Implement client-side SCORM package validation and preview on `/teacher/import-scorm`. User selects .zip, browser uses JSZip to read, DOMParser to parse `imsmanifest.xml` for title, version, entry point. Preview this info. UploadThing upload occurs only after user confirmation based on preview. Modify `ScormUpload` and `ScormImportPage`.",
+      "summary": "Updated `app/(protected)/(dashboard)/(routes)/teacher/import-scorm/page.tsx` to integrate client-side SCORM preview and deferred UploadThing upload. Added state for preview data, file object, and errors. Initialized `useUploadThing` hook. `ScormUpload` component now uses `onPreviewAvailable` to pass data/errors to the page. The page displays this preview. Form submission is now a two-step process: 1. User action triggers UploadThing `startUpload` (if preview is valid). 2. `onClientUploadComplete` populates form with uploaded URL and previewed metadata, then posts to `/api/courses`. UI loading/disabled states and error displays were updated accordingly.",
+      "completedAt": "2025-05-28T08:19:13.924Z"
+    }
+  ]
+}

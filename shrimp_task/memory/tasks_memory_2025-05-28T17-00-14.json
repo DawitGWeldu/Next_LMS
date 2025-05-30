@@ -1,0 +1,259 @@
+{
+  "tasks": [
+    {
+      "id": "371dc617-da15-452a-83b3-b0d09fbacfde",
+      "name": "Modify ScormUpload component for deferred upload",
+      "description": "Update the ScormUpload component to separate file validation from uploading, allowing files to be validated but only uploaded when explicitly triggered via a new API.",
+      "status": "completed",
+      "dependencies": [],
+      "createdAt": "2025-05-28T14:08:49.180Z",
+      "updatedAt": "2025-05-28T15:38:28.432Z",
+      "relatedFiles": [
+        {
+          "path": "components/scorm-upload.tsx",
+          "type": "TO_MODIFY",
+          "description": "Main SCORM upload component that needs to be modified to separate validation from upload",
+          "lineStart": 1,
+          "lineEnd": 254
+        },
+        {
+          "path": "components/client-wrappers.tsx",
+          "type": "TO_MODIFY",
+          "description": "Client-side wrapper for SCORM upload component that may need updates to reflect new props",
+          "lineStart": 1,
+          "lineEnd": 34
+        }
+      ],
+      "implementationGuide": "1. Add a new prop `onFileValidated` to ScormUpload component to expose validated file object\n2. Refactor `handleFileChange` to validate file but not upload\n3. Create new `uploadFile` method that can be called externally\n4. Modify UI states to reflect new workflow states (validated but not uploaded)\n5. Add file storage in component state\n6. Maintain existing validation and metadata extraction logic",
+      "verificationCriteria": "1. Component should validate files without uploading them\n2. Component should expose validated file via callback\n3. Component should provide a method to trigger upload\n4. UI should reflect different states (not selected, validating, validated, uploading, uploaded)\n5. All existing functionality for validation and metadata extraction should remain intact",
+      "analysisResult": "The SCORM course integration enhancement requires two major changes:\n\n1. **Deferred Upload**: Separate file validation from upload in the ScormUpload component, allowing files to be validated immediately but uploaded only when the form is submitted.\n\n2. **SCORM-Specific Course Setup**: Create conditional UI and functionality in the course setup page based on course type, with specialized components and publishing flow for SCORM courses.\n\nThe implementation will maintain existing validation logic and leverages the current database schema, which already supports both regular and SCORM courses through the Course and ScormPackage models.",
+      "summary": "Successfully modified the ScormUpload component to separate file validation from uploading. Added new props (deferUpload, onFileValidated) and states (isValidated) to control the workflow. Created a ref-based API to expose the uploadFile method that can be called externally. Updated the client-side wrapper components to support the new functionality. Implemented proper UI feedback showing different states for validation and upload status.",
+      "completedAt": "2025-05-28T15:38:28.431Z"
+    },
+    {
+      "id": "d21b453e-e16a-4536-b598-bed13786b73e",
+      "name": "Add upload progress tracking to ScormUpload component",
+      "description": "Enhance the ScormUpload component to track and display upload progress using UploadThing's progress API.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "371dc617-da15-452a-83b3-b0d09fbacfde"
+        }
+      ],
+      "createdAt": "2025-05-28T14:08:49.180Z",
+      "updatedAt": "2025-05-28T15:43:33.726Z",
+      "relatedFiles": [
+        {
+          "path": "components/scorm-upload.tsx",
+          "type": "TO_MODIFY",
+          "description": "SCORM upload component to add progress tracking",
+          "lineStart": 1,
+          "lineEnd": 254
+        }
+      ],
+      "implementationGuide": "1. Add upload progress state in the component: `const [uploadProgress, setUploadProgress] = useState<number>(0)`\n2. Use UploadThing's progress callback to update the progress state\n3. Create progress bar UI component that shows during upload\n4. Add progress percentage text display\n5. Update UI states to show upload progress when in uploading state\n6. Add callback to report progress to parent component",
+      "verificationCriteria": "1. Progress bar should be displayed during upload\n2. Progress percentage should be accurate and update in real-time\n3. Progress should be exposed to parent components via callback\n4. UI should transition smoothly between different progress states",
+      "analysisResult": "The SCORM course integration enhancement requires two major changes:\n\n1. **Deferred Upload**: Separate file validation from upload in the ScormUpload component, allowing files to be validated immediately but uploaded only when the form is submitted.\n\n2. **SCORM-Specific Course Setup**: Create conditional UI and functionality in the course setup page based on course type, with specialized components and publishing flow for SCORM courses.\n\nThe implementation will maintain existing validation logic and leverages the current database schema, which already supports both regular and SCORM courses through the Course and ScormPackage models.",
+      "summary": "Successfully added upload progress tracking to the ScormUpload component using UploadThing's progress API. Implemented a progress bar UI with percentage display, added state management for tracking progress, and updated the client wrappers to support the new progress tracking functionality. The component now visually shows upload progress and exposes progress events to parent components via callback.",
+      "completedAt": "2025-05-28T15:43:33.725Z"
+    },
+    {
+      "id": "7ad755a1-ced7-4a33-9981-4ae258d0a9fd",
+      "name": "Update SCORM import page for deferred upload",
+      "description": "Modify the SCORM import page to implement deferred upload functionality, storing validated files and only uploading them when the form is submitted.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "371dc617-da15-452a-83b3-b0d09fbacfde"
+        },
+        {
+          "taskId": "d21b453e-e16a-4536-b598-bed13786b73e"
+        }
+      ],
+      "createdAt": "2025-05-28T14:08:49.180Z",
+      "updatedAt": "2025-05-28T15:46:31.368Z",
+      "relatedFiles": [
+        {
+          "path": "app/(protected)/(dashboard)/(routes)/teacher/import-scorm/page.tsx",
+          "type": "TO_MODIFY",
+          "description": "SCORM import page that needs to implement deferred upload logic",
+          "lineStart": 1,
+          "lineEnd": 288
+        }
+      ],
+      "implementationGuide": "1. Add state for storing validated SCORM file: `const [validatedFile, setValidatedFile] = useState<File | null>(null)`\n2. Add upload progress state: `const [uploadProgress, setUploadProgress] = useState<number>(0)`\n3. Update form submission flow to first validate form, then upload file if not yet uploaded, then submit form data\n4. Add handler for validated files from ScormUpload component\n5. Modify 'Create SCORM Course' button to initiate upload and submission sequence\n6. Add UI to display upload progress during submission\n7. Ensure validation error handling remains intact",
+      "verificationCriteria": "1. SCORM package should not upload until 'Create SCORM Course' button is clicked\n2. Upload progress should be displayed during submission\n3. Form validation should work properly before upload\n4. Error handling should function for both validation and upload errors\n5. Successful uploads should redirect to course setup as before",
+      "analysisResult": "The SCORM course integration enhancement requires two major changes:\n\n1. **Deferred Upload**: Separate file validation from upload in the ScormUpload component, allowing files to be validated immediately but uploaded only when the form is submitted.\n\n2. **SCORM-Specific Course Setup**: Create conditional UI and functionality in the course setup page based on course type, with specialized components and publishing flow for SCORM courses.\n\nThe implementation will maintain existing validation logic and leverages the current database schema, which already supports both regular and SCORM courses through the Course and ScormPackage models.",
+      "summary": "Successfully updated the SCORM import page to implement deferred upload functionality. Added state management for validated files, integrated with the new ScormUpload component capabilities, implemented a two-phase submission process that validates then uploads, and added visual feedback for upload progress. The form now stores validated files and only uploads them when the form is submitted, improving the user experience.",
+      "completedAt": "2025-05-28T15:46:31.367Z"
+    },
+    {
+      "id": "064b464a-ff5a-4633-8583-aa631542f7e8",
+      "name": "Create SCORM course detection utility",
+      "description": "Create a utility function to detect if a course is a SCORM course based on the existence of a related ScormPackage record.",
+      "status": "completed",
+      "dependencies": [],
+      "createdAt": "2025-05-28T14:08:49.180Z",
+      "updatedAt": "2025-05-28T15:32:57.522Z",
+      "relatedFiles": [
+        {
+          "path": "lib/course-utils.ts",
+          "type": "CREATE",
+          "description": "New utility file for course-related helper functions"
+        }
+      ],
+      "implementationGuide": "1. Create a new file `lib/course-utils.ts`\n2. Implement `isScormCourse` function that checks for existence of scormPackage relation\n3. Add TypeScript type guards for better type safety\n4. Add utility function to get correct required fields based on course type",
+      "verificationCriteria": "1. Function should correctly identify SCORM courses\n2. Function should provide type safety through TypeScript guards\n3. Required fields utility should return different fields for different course types",
+      "analysisResult": "The SCORM course integration enhancement requires two major changes:\n\n1. **Deferred Upload**: Separate file validation from upload in the ScormUpload component, allowing files to be validated immediately but uploaded only when the form is submitted.\n\n2. **SCORM-Specific Course Setup**: Create conditional UI and functionality in the course setup page based on course type, with specialized components and publishing flow for SCORM courses.\n\nThe implementation will maintain existing validation logic and leverages the current database schema, which already supports both regular and SCORM courses through the Course and ScormPackage models.",
+      "summary": "Successfully created the SCORM course detection utility that can identify courses with associated SCORM packages. Implemented type guards for TypeScript safety and added a utility to determine required fields based on course type. Also provided a generic type helper to extend existing course types with SCORM package information.",
+      "completedAt": "2025-05-28T15:32:57.520Z"
+    },
+    {
+      "id": "324ba02d-e915-4bcc-85a6-7067a91153e0",
+      "name": "Create SCORM course details component",
+      "description": "Create a dedicated component for displaying SCORM course details in the course setup page.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "064b464a-ff5a-4633-8583-aa631542f7e8"
+        }
+      ],
+      "createdAt": "2025-05-28T14:08:49.180Z",
+      "updatedAt": "2025-05-28T15:50:49.540Z",
+      "relatedFiles": [
+        {
+          "path": "app/(protected)/(dashboard)/(routes)/teacher/courses/[courseId]/_components/scorm-details-form.tsx",
+          "type": "CREATE",
+          "description": "New component for displaying SCORM-specific course details"
+        }
+      ],
+      "implementationGuide": "1. Create new file `app/(protected)/(dashboard)/(routes)/teacher/courses/[courseId]/_components/scorm-details-form.tsx`\n2. Implement a component that displays SCORM metadata from the database\n3. Include relevant SCORM fields: version, entry point, etc.\n4. Style consistently with existing detail components\n5. Add any necessary SCORM-specific actions/controls",
+      "verificationCriteria": "1. Component should display all relevant SCORM metadata\n2. UI should match the style of existing course components\n3. Component should handle missing or incomplete SCORM data gracefully",
+      "analysisResult": "The SCORM course integration enhancement requires two major changes:\n\n1. **Deferred Upload**: Separate file validation from upload in the ScormUpload component, allowing files to be validated immediately but uploaded only when the form is submitted.\n\n2. **SCORM-Specific Course Setup**: Create conditional UI and functionality in the course setup page based on course type, with specialized components and publishing flow for SCORM courses.\n\nThe implementation will maintain existing validation logic and leverages the current database schema, which already supports both regular and SCORM courses through the Course and ScormPackage models.",
+      "summary": "Successfully created a dedicated ScormDetailsForm component for displaying SCORM course details in the course setup page. The component shows all relevant SCORM metadata including version, entry point, manifest path, and original ZIP file. It also provides editing capabilities for title and description, handles missing data gracefully, and includes an API endpoint for updating SCORM package details.",
+      "completedAt": "2025-05-28T15:50:49.539Z"
+    },
+    {
+      "id": "3853a41b-cf3c-48ed-82d4-1e92dee44a8e",
+      "name": "Modify course setup page for SCORM courses",
+      "description": "Update the course setup page to conditionally render different components based on whether the course is a SCORM course.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "064b464a-ff5a-4633-8583-aa631542f7e8"
+        },
+        {
+          "taskId": "324ba02d-e915-4bcc-85a6-7067a91153e0"
+        }
+      ],
+      "createdAt": "2025-05-28T14:08:49.180Z",
+      "updatedAt": "2025-05-28T16:09:29.270Z",
+      "relatedFiles": [
+        {
+          "path": "app/(protected)/(dashboard)/(routes)/teacher/courses/[courseId]/page.tsx",
+          "type": "TO_MODIFY",
+          "description": "Course setup page that needs to be updated for SCORM courses",
+          "lineStart": 1,
+          "lineEnd": 159
+        }
+      ],
+      "implementationGuide": "1. Import the SCORM detection utility\n2. Add conditional logic to determine if course is a SCORM course\n3. Modify the required fields logic to have different requirements for SCORM courses\n4. Render SCORM-specific components for SCORM courses\n5. Hide chapter-related UI for SCORM courses\n6. Ensure publish/unpublish functionality works for both course types",
+      "verificationCriteria": "1. Page should correctly distinguish between regular and SCORM courses\n2. Required fields calculation should differ based on course type\n3. UI should show appropriate components for each course type\n4. Publish functionality should work for both course types",
+      "analysisResult": "The SCORM course integration enhancement requires two major changes:\n\n1. **Deferred Upload**: Separate file validation from upload in the ScormUpload component, allowing files to be validated immediately but uploaded only when the form is submitted.\n\n2. **SCORM-Specific Course Setup**: Create conditional UI and functionality in the course setup page based on course type, with specialized components and publishing flow for SCORM courses.\n\nThe implementation will maintain existing validation logic and leverages the current database schema, which already supports both regular and SCORM courses through the Course and ScormPackage models.",
+      "summary": "Successfully modified the course setup page for SCORM courses. The page now correctly distinguishes between regular and SCORM courses, applies different required fields logic, conditionally renders the ScormDetailsForm component, and hides chapters UI for SCORM courses. Also added SCORM badge to visually indicate SCORM course type. All verification criteria have been met.",
+      "completedAt": "2025-05-28T16:09:29.267Z"
+    },
+    {
+      "id": "18035a95-e5a3-4544-a10d-246b57b7e50e",
+      "name": "Update Actions component for SCORM courses",
+      "description": "Modify the course actions component to handle SCORM courses differently, adapting the publish/unpublish functionality.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "3853a41b-cf3c-48ed-82d4-1e92dee44a8e"
+        }
+      ],
+      "createdAt": "2025-05-28T14:08:49.180Z",
+      "updatedAt": "2025-05-28T16:09:49.890Z",
+      "relatedFiles": [
+        {
+          "path": "app/(protected)/(dashboard)/(routes)/teacher/courses/[courseId]/_components/actions.tsx",
+          "type": "TO_MODIFY",
+          "description": "Actions component for publishing/unpublishing courses",
+          "lineStart": 1,
+          "lineEnd": 82
+        }
+      ],
+      "implementationGuide": "1. Add a new prop `isScormCourse` to the Actions component\n2. Update the publish/unpublish logic for SCORM courses\n3. Modify the disabled state logic for SCORM courses\n4. Ensure proper API endpoints are called for each course type",
+      "verificationCriteria": "1. Actions component should handle SCORM courses correctly\n2. Publish/unpublish functionality should work for SCORM courses\n3. Correct API endpoints should be called based on course type\n4. UI should reflect the correct state for each course type",
+      "analysisResult": "The SCORM course integration enhancement requires two major changes:\n\n1. **Deferred Upload**: Separate file validation from upload in the ScormUpload component, allowing files to be validated immediately but uploaded only when the form is submitted.\n\n2. **SCORM-Specific Course Setup**: Create conditional UI and functionality in the course setup page based on course type, with specialized components and publishing flow for SCORM courses.\n\nThe implementation will maintain existing validation logic and leverages the current database schema, which already supports both regular and SCORM courses through the Course and ScormPackage models.",
+      "summary": "Successfully updated the Actions component to handle SCORM courses differently. Added an isScormCourse prop and modified the publish/unpublish functionality to accommodate SCORM course requirements. The implementation includes adjustments to the disabled state logic and better error handling with improved console logging. Also updated the parent CourseIdPage to pass the isScorm flag to the Actions component.",
+      "completedAt": "2025-05-28T16:09:49.889Z"
+    },
+    {
+      "id": "69eeb0f2-f1a0-4e04-89ac-719e390976ba",
+      "name": "Test and debug deferred upload functionality",
+      "description": "Test the deferred upload implementation to ensure it works correctly and debug any issues.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "7ad755a1-ced7-4a33-9981-4ae258d0a9fd"
+        }
+      ],
+      "createdAt": "2025-05-28T14:08:49.180Z",
+      "updatedAt": "2025-05-28T16:43:25.917Z",
+      "relatedFiles": [
+        {
+          "path": "components/scorm-upload.tsx",
+          "type": "REFERENCE",
+          "description": "SCORM upload component"
+        },
+        {
+          "path": "app/(protected)/(dashboard)/(routes)/teacher/import-scorm/page.tsx",
+          "type": "REFERENCE",
+          "description": "SCORM import page"
+        }
+      ],
+      "implementationGuide": "1. Test file selection and validation without upload\n2. Test upload triggered by form submission\n3. Test upload progress display\n4. Test error handling for validation and upload\n5. Test full form submission flow\n6. Fix any bugs identified during testing",
+      "verificationCriteria": "1. File validation should work without triggering upload\n2. Upload should only happen on form submission\n3. Upload progress should display correctly\n4. Error handling should work for all scenarios\n5. Form submission should complete successfully",
+      "analysisResult": "The SCORM course integration enhancement requires two major changes:\n\n1. **Deferred Upload**: Separate file validation from upload in the ScormUpload component, allowing files to be validated immediately but uploaded only when the form is submitted.\n\n2. **SCORM-Specific Course Setup**: Create conditional UI and functionality in the course setup page based on course type, with specialized components and publishing flow for SCORM courses.\n\nThe implementation will maintain existing validation logic and leverages the current database schema, which already supports both regular and SCORM courses through the Course and ScormPackage models.",
+      "summary": "Testing of deferred upload implementation has been completed successfully. The functionality correctly separates file validation from uploading, allowing files to be validated immediately but only uploaded during form submission. Upload progress displays accurately, and appropriate error handling is in place for validation failures and upload errors. The full form submission flow works correctly, with the validated file being uploaded only when the user submits the form.",
+      "completedAt": "2025-05-28T16:43:25.911Z"
+    },
+    {
+      "id": "fbeb03c4-a3ff-4563-930e-20f43a4b95eb",
+      "name": "Test and debug SCORM course setup functionality",
+      "description": "Test the SCORM-specific course setup implementation to ensure it works correctly and debug any issues.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "18035a95-e5a3-4544-a10d-246b57b7e50e"
+        }
+      ],
+      "createdAt": "2025-05-28T14:08:49.180Z",
+      "updatedAt": "2025-05-28T16:45:23.587Z",
+      "relatedFiles": [
+        {
+          "path": "app/(protected)/(dashboard)/(routes)/teacher/courses/[courseId]/page.tsx",
+          "type": "REFERENCE",
+          "description": "Course setup page"
+        },
+        {
+          "path": "app/(protected)/(dashboard)/(routes)/teacher/courses/[courseId]/_components/actions.tsx",
+          "type": "REFERENCE",
+          "description": "Actions component"
+        },
+        {
+          "path": "app/(protected)/(dashboard)/(routes)/teacher/courses/[courseId]/_components/scorm-details-form.tsx",
+          "type": "REFERENCE",
+          "description": "SCORM details component"
+        }
+      ],
+      "implementationGuide": "1. Test course type detection\n2. Test required fields calculation for SCORM courses\n3. Test UI rendering for SCORM courses\n4. Test publish/unpublish functionality for SCORM courses\n5. Test display of SCORM metadata\n6. Fix any bugs identified during testing",
+      "verificationCriteria": "1. Course type detection should be accurate\n2. UI should display correctly for SCORM courses\n3. Publish/unpublish functionality should work for SCORM courses\n4. SCORM metadata should display correctly",
+      "analysisResult": "The SCORM course integration enhancement requires two major changes:\n\n1. **Deferred Upload**: Separate file validation from upload in the ScormUpload component, allowing files to be validated immediately but uploaded only when the form is submitted.\n\n2. **SCORM-Specific Course Setup**: Create conditional UI and functionality in the course setup page based on course type, with specialized components and publishing flow for SCORM courses.\n\nThe implementation will maintain existing validation logic and leverages the current database schema, which already supports both regular and SCORM courses through the Course and ScormPackage models.",
+      "summary": "Successfully tested and improved the SCORM course setup functionality. Enhanced error handling in the Actions component to provide clear, user-friendly messages specific to different error scenarios. Added detailed error messages for 401 errors that distinguish between SCORM and regular courses, showing appropriate required field guidance. Improved error handling for network issues and other HTTP errors with specific messages instead of the generic \"Something went wrong.\" The improvements make it easier for users to understand and fix issues when attempting to publish incomplete courses.",
+      "completedAt": "2025-05-28T16:45:23.586Z"
+    }
+  ]
+}

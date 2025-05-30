@@ -1,6 +1,6 @@
 import { IconBadge } from "@/components/icon-badge";
 import { db } from "@/lib/db";
-import { CircleDollarSign, File, LayoutDashboardIcon, ListChecks } from "lucide-react";
+import { CircleDollarSign, File, LayoutDashboardIcon, ListChecks, FileArchive } from "lucide-react";
 import { redirect } from "next/navigation";
 import { TitleForm } from "./_components/title-form";
 import { DescriptionForm } from "./_components/description-form";
@@ -9,9 +9,13 @@ import { CategoryForm } from "./_components/category-form";
 import { AttachmentForm } from "./_components/attachment-form";
 import { PriceForm } from "./_components/price-form";
 import { ChaptersForm } from "./_components/chapters-form";
+import { ScormDetailsForm } from "./_components/scorm-details-form";
 import { Banner } from "@/components/banner";
 import { Actions } from "./_components/actions";
 import { currentUser } from "@/lib/auth";
+import { isScormCourse } from "@/lib/course-utils";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 
 const CourseIdPage = async ({
@@ -20,7 +24,7 @@ const CourseIdPage = async ({
     params: { courseId: string }
 }) => {
 
-    const user  = await currentUser();
+    const user = await currentUser();
     if (!user?.id) {
         return redirect("/");
     }
@@ -40,6 +44,7 @@ const CourseIdPage = async ({
                     createdAt: "desc",
                 },
             },
+            scormPackage: true,
         },
     });
 
@@ -53,14 +58,33 @@ const CourseIdPage = async ({
         return redirect("/");
     }
 
-    const requiredFields = [
-        course.title,
-        course.description,
-        course.imageUrl,
-        course.price,
-        course.categoryId,
-        course.chapters.some(chapter => chapter.isPublished),
-    ];
+    // Check if this is a SCORM course
+    const isScorm = isScormCourse(course);
+
+    // Define required fields based on course type
+    let requiredFields = [];
+    
+    if (isScorm) {
+        // SCORM courses have different requirements
+        requiredFields = [
+            course.title,
+            course.description,
+            course.imageUrl,
+            course.price,
+            course.categoryId,
+            // No chapters required for SCORM courses
+        ];
+    } else {
+        // Regular courses require chapters
+        requiredFields = [
+            course.title,
+            course.description,
+            course.imageUrl,
+            course.price,
+            course.categoryId,
+            course.chapters.some(chapter => chapter.isPublished),
+        ];
+    }
 
     const totalFields = requiredFields.length;
     const completedFields = requiredFields.filter(Boolean).length;
@@ -77,9 +101,19 @@ const CourseIdPage = async ({
             <div className="p-6">
                 <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-y-2">
-                        <h1 className="text-2xl font-medium">
-                            Course Setup
-                        </h1>
+                        <div className="flex items-center gap-x-2">
+                            <h1 className="text-2xl font-medium">
+                                Course Setup
+                            </h1>
+                            {isScorm && (
+                                <Badge 
+                                    variant="outline"
+                                    className="bg-blue-50 text-blue-700 border-blue-200"
+                                >
+                                    SCORM
+                                </Badge>
+                            )}
+                        </div>
                         <span className="text-sm text-slate-700">
                             Complete all fields {completionText}
                         </span>
@@ -88,6 +122,7 @@ const CourseIdPage = async ({
                         disabled={!isComplete}
                         courseId={params.courseId}
                         isPublished={course.isPublished}
+                        isScormCourse={isScorm}
                     />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-16">
@@ -110,21 +145,34 @@ const CourseIdPage = async ({
                             }))}
                         />
 
-
-                    </div>
-                    <div className="space-y-6">
-                        <div>
-                            <div className="flex items-center gap-x-2">
-                                <IconBadge icon={ListChecks} />
-                                <h2 className="text-xl">
-                                    Course chapters
-                                </h2>
-                            </div>
-                            <ChaptersForm
-                                initialData={course}
+                        {isScorm && (
+                            <ScormDetailsForm 
+                                initialData={{ 
+                                    scormPackage: course.scormPackage ? {
+                                        ...course.scormPackage,
+                                        createdAt: course.scormPackage.createdAt.toISOString(),
+                                        updatedAt: course.scormPackage.updatedAt.toISOString(),
+                                    } : null 
+                                }}
                                 courseId={course.id}
                             />
-                        </div>
+                        )}
+                    </div>
+                    <div className="space-y-6">
+                        {!isScorm && (
+                            <div>
+                                <div className="flex items-center gap-x-2">
+                                    <IconBadge icon={ListChecks} />
+                                    <h2 className="text-xl">
+                                        Course chapters
+                                    </h2>
+                                </div>
+                                <ChaptersForm
+                                    initialData={course}
+                                    courseId={course.id}
+                                />
+                            </div>
+                        )}
                         <div>
                             <div className="flex items-center gap-x-2">
                                 <IconBadge icon={CircleDollarSign} />

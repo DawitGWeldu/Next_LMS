@@ -20,6 +20,9 @@ export const ourFileRouter = {
     .onUploadComplete(() => {}),
   chapterVideo: f({ video: { maxFileCount: 1, maxFileSize: "512GB" } })
     .middleware(() => handleAuth())
+    .onUploadComplete(() => {}),
+  scormPackage: f({ "application/zip": { maxFileSize: "512MB", maxFileCount: 1 } })
+    .middleware(() => handleAuth())
     .onUploadComplete(() => {})
 } satisfies FileRouter;
  

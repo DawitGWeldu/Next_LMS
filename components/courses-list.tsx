@@ -1,11 +1,13 @@
-import { Category, Course } from "@prisma/client";
+import { Category, Course, ScormPackage } from "@prisma/client";
 
 import { CourseCard } from "@/components/course-card";
+import { isScormCourse } from "@/lib/course-utils";
 
 type CourseWithProgressWithCategory = Course & {
   category: Category | null;
   chapters: { id: string }[];
   progress: number | null;
+  scormPackage?: ScormPackage | null;
 };
 
 interface CoursesListProps {
@@ -28,6 +30,7 @@ export const CoursesList = ({
             price={item.price!}
             progress={item.progress}
             category={item?.category?.name!}
+            isScormCourse={isScormCourse(item)}
           />
         ))}
       </div>

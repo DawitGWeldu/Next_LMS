@@ -1,8 +1,8 @@
 "use client"
 
-import { Course } from "@prisma/client"
+import { Course, ScormPackage } from "@prisma/client"
 import { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal, Pencil } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal, Pencil, BookOpen } from "lucide-react"
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-export const columns: ColumnDef<Course>[] = [
+// Extended Course type to include SCORM package information
+type CourseWithScorm = Course & {
+  scormPackage?: ScormPackage | null;
+};
+
+export const columns: ColumnDef<CourseWithScorm>[] = [
   {
     accessorKey: "title",
     header: ({ column }) => {
@@ -77,6 +82,24 @@ export const columns: ColumnDef<Course>[] = [
           {isPublished ? "Published" : "Draft"}
         </Badge>
       )
+    }
+  },
+  {
+    id: "courseType",
+    header: "Type",
+    cell: ({ row }) => {
+      const hasScorm = !!row.original.scormPackage;
+
+      return hasScorm ? (
+        <Badge className="bg-emerald-700 hover:bg-emerald-800 flex items-center gap-1">
+          <BookOpen className="h-3 w-3" />
+          SCORM
+        </Badge>
+      ) : (
+        <Badge variant="outline" className="text-slate-600 border-slate-400">
+          Standard
+        </Badge>
+      );
     }
   },
   {

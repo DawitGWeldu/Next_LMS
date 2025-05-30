@@ -1,10 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BookOpen } from "lucide-react";
+import { BookOpen, FileArchive } from "lucide-react";
 
 import { IconBadge } from "@/components/icon-badge";
 import { formatPrice } from "@/lib/format";
 import { CourseProgress } from "@/components/course-progress";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface CourseCardProps {
   id: string;
@@ -14,6 +16,7 @@ interface CourseCardProps {
   price: number;
   progress: number | null;
   category: string;
+  isScormCourse?: boolean;
 };
 
 export const CourseCard = ({
@@ -23,7 +26,8 @@ export const CourseCard = ({
   chaptersLength,
   price,
   progress,
-  category
+  category,
+  isScormCourse = false
 }: CourseCardProps) => {
   return (
     <Link href={`/courses/${id}`}>
@@ -37,17 +41,33 @@ export const CourseCard = ({
           />
         </div>
         <div className="flex flex-col pt-2">
-          <div className="text-lg md:text-base font-medium group-hover:text-sky-700 transition line-clamp-2">
-            {title}
+          <div className="flex items-center justify-between">
+            <div className="text-lg md:text-base font-medium group-hover:text-sky-700 transition line-clamp-2">
+              {title}
+            </div>
+            {isScormCourse && (
+              <Badge 
+                variant="outline"
+                className="ml-2 bg-blue-50 text-blue-700 border-blue-200"
+              >
+                SCORM
+              </Badge>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">
             {category}
           </p>
           <div className="my-3 flex items-center gap-x-2 text-sm md:text-xs">
             <div className="flex items-center gap-x-1 text-slate-500">
-              <IconBadge size="sm" icon={BookOpen} />
+              <IconBadge 
+                size="sm" 
+                icon={isScormCourse ? FileArchive : BookOpen} 
+              />
               <span>
-                {chaptersLength} {chaptersLength === 1 ? "Chapter" : "Chapters"}
+                {isScormCourse 
+                  ? "Interactive Package"
+                  : `${chaptersLength} ${chaptersLength === 1 ? "Chapter" : "Chapters"}`
+                }
               </span>
             </div>
           </div>

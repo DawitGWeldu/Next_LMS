@@ -1,4 +1,3 @@
-
 import NextAuth from "next-auth"
 import { UserRole, User } from "@prisma/client";
 import { PrismaAdapter } from "@auth/prisma-adapter";
@@ -8,6 +7,13 @@ import authConfig from "@/auth.config";
 import { getUserById } from "@/data/user";
 import { getTwoFactorConfirmationByUserId } from "@/data/two-factor-confirmation";
 import { getAccountByUserId } from "./data/account";
+import { credentialsProvider } from "./auth.credentials";
+
+// Add credentials provider on the server side only (not in Edge runtime)
+const extendedConfig = {
+  ...authConfig,
+  providers: [...authConfig.providers, credentialsProvider]
+}
 
 export const {
   handlers: { GET, POST },
@@ -97,5 +103,5 @@ export const {
   },
   adapter: PrismaAdapter(db),
   session: { strategy: "jwt" },
-  ...authConfig,
+  ...extendedConfig,
 });

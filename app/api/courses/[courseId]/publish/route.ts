@@ -2,6 +2,7 @@ import { currentUser } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
+import { isScormCourse } from "@/lib/course-utils";
 
 export async function PATCH(
   req: Request,
@@ -24,7 +25,8 @@ export async function PATCH(
           include: {
             muxData: true,
           }
-        }
+        },
+        scormPackage: true,
       }
     });
 
@@ -32,10 +34,21 @@ export async function PATCH(
       return new NextResponse("Not found", { status: 404 });
     }
 
-    const hasPublishedChapter = course.chapters.some((chapter) => chapter.isPublished);
+    // Check if this is a SCORM course using our utility
+    const courseIsScorm = isScormCourse(course);
 
-    if (!course.title || !course.description || !course.imageUrl || !course.categoryId || !hasPublishedChapter) {
-      return new NextResponse("Missing required fields", { status: 401 });
+    // Different validation based on course type
+    if (courseIsScorm) {
+      // For SCORM courses, we need different required fields
+      if (!course.title || !course.categoryId || !course.scormPackage) {
+        return new NextResponse("Missing required fields for SCORM course", { status: 401 });
+      }
+    } else {
+      // For regular courses, check chapters are published
+      const hasPublishedChapter = course.chapters.some((chapter) => chapter.isPublished);
+      if (!course.title || !course.description || !course.imageUrl || !course.categoryId || !hasPublishedChapter) {
+        return new NextResponse("Missing required fields for regular course", { status: 401 });
+      }
     }
 
     const publishedCourse = await db.course.update({
@@ -54,3 +67,7 @@ export async function PATCH(
     return new NextResponse("Internal Error", { status: 500 });
   } 
 }
+
+// This is a dummy export to satisfy Next.js build process
+// See: https://github.com/vercel/next.js/discussions/48724
+export const dynamic = "force-dynamic";
