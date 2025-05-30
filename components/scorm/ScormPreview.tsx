@@ -23,6 +23,8 @@ import scormApi, {
 } from "@/lib/client/scorm-api";
 import { cn } from "@/lib/utils";
 import { Loader2, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScormManifest, ScormItem, ScormResource } from "@/lib/scorm";
 import {
   findItemById,
@@ -1683,49 +1685,102 @@ export function ScormPreview({
 
       {/* Add debug overlay - only on client */}
       {isClient && (
-        <div className="absolute bottom-2 left-2 bg-white/80 p-2 rounded text-xs border border-gray-200 z-10">
-          <p>
-            Content URL:{" "}
-            {contentUrl ? contentUrl.substring(0, 40) + "..." : "None"}
-          </p>
-          <p>Iframe Ready: {iframeReady ? "Yes" : "No"}</p>
-          <p>Iframe DOM Mounted: {iframeDomMounted.current ? "Yes" : "No"}</p>
-          <p>Pending URL: {pendingUrl.current ? "Yes" : "No"}</p>
-          <p>Loading: {isLoading ? "Yes" : "No"}</p>
-          <p>SCORM Version (prop): {scormVersion}</p>
-          <p>API Initialized: {isScormApiInitialized ? "Yes" : "No"}</p>
-          <p>Init Attempts: {initializationAttempts}/{maxInitAttempts}</p>
-          <p>Retrying: {isRetrying ? "Yes" : "No"}</p>
-          <button
-            onClick={() => {
-              if (iframeRef.current && contentUrl) {
-                const url = contentUrl + "?t=" + Date.now();
-                console.log("Manually forcing iframe reload to:", url);
-                setIframeSrc(url);
-              }
-            }}
-            disabled={!contentUrl}
-            className={cn(
-              "px-2 py-1 rounded mt-1 text-xs mr-2",
-              contentUrl
-                ? "bg-blue-500 text-white hover:bg-blue-600"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            )}
-          >
-            Force Reload
-          </button>
-          <button
-            onClick={forceRetryInitialization}
-            disabled={isScormApiInitialized}
-            className={cn(
-              "px-2 py-1 rounded mt-1 text-xs",
-              !isScormApiInitialized
-                ? "bg-green-500 text-white hover:bg-green-600"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            )}
-          >
-            Retry API Init
-          </button>
+        <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm p-3 rounded-lg text-xs border border-slate-200 shadow-md z-10 max-w-[300px] transition-all duration-300 hover:opacity-100 opacity-80">
+          <div className="flex items-center justify-between mb-1.5">
+            <h4 className="font-semibold text-slate-700 flex items-center">
+              <span className="bg-blue-500 w-2 h-2 rounded-full mr-1.5"></span>
+              SCORM Status
+            </h4>
+            <Badge variant={isScormApiInitialized ? "secondary" : "outline"} className="text-[10px] h-4">
+              {isScormApiInitialized ? "API Ready" : "API Pending"}
+            </Badge>
+          </div>
+          
+          <div className="space-y-1.5 divide-y divide-slate-100">
+            <div className="pb-1.5">
+              <div className="grid grid-cols-2 gap-x-2">
+                <div className="text-slate-500">Content URL:</div>
+                <div className="text-slate-700 truncate">
+                  {contentUrl ? contentUrl.split('/').pop() : "None"}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-x-2">
+                <div className="text-slate-500">Iframe Ready:</div>
+                <div className="text-slate-700">
+                  {iframeReady ? 
+                    <span className="text-green-600">Yes</span> : 
+                    <span className="text-amber-600">No</span>
+                  }
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-x-2">
+                <div className="text-slate-500">SCORM Version:</div>
+                <div className="text-slate-700">{scormVersion}</div>
+              </div>
+            </div>
+            
+            <div className="py-1.5">
+              <div className="grid grid-cols-2 gap-x-2">
+                <div className="text-slate-500">Init Attempts:</div>
+                <div className="text-slate-700">
+                  <span className={initializationAttempts > 0 ? "text-amber-600" : "text-slate-700"}>
+                    {initializationAttempts}/{maxInitAttempts}
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-x-2">
+                <div className="text-slate-500">Loading State:</div>
+                <div className="text-slate-700">
+                  {isLoading ? 
+                    <span className="text-amber-600">Loading</span> : 
+                    <span className="text-green-600">Complete</span>
+                  }
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-x-2">
+                <div className="text-slate-500">Retrying:</div>
+                <div className="text-slate-700">
+                  {isRetrying ? 
+                    <span className="text-amber-600">Yes</span> : 
+                    <span className="text-slate-700">No</span>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex gap-1.5 mt-2.5">
+            <Button
+              onClick={() => {
+                if (iframeRef.current && contentUrl) {
+                  const url = contentUrl + "?t=" + Date.now();
+                  console.log("Manually forcing iframe reload to:", url);
+                  setIframeSrc(url);
+                }
+              }}
+              disabled={!contentUrl}
+              className={cn(
+                "px-2 py-1 rounded text-[10px] h-6 flex-1",
+                contentUrl
+                  ? "bg-blue-500 text-white hover:bg-blue-600"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              )}
+            >
+              <span className="truncate">Reload Frame</span>
+            </Button>
+            <Button
+              onClick={forceRetryInitialization}
+              disabled={isScormApiInitialized}
+              className={cn(
+                "px-2 py-1 rounded text-[10px] h-6 flex-1",
+                !isScormApiInitialized
+                  ? "bg-green-500 text-white hover:bg-green-600"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              )}
+            >
+              <span className="truncate">Retry API</span>
+            </Button>
+          </div>
         </div>
       )}
     </div>

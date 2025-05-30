@@ -66,15 +66,27 @@ export default async function CourseScormPage({
 
   return (
     <div className="h-full flex flex-col">
-      {courseData.scormPackage.originalZipUrl && (
-        <CourseScormPlayer
-          userId={user.id}
-          courseId={course.id}
-          scormPackageId={courseData.scormPackage.id}
-          scormUrl={courseData.scormPackage.originalZipUrl}
-          scormVersion={courseData.scormPackage.version || "SCORM_12"}
-        />
-      )}
+      <div className="bg-white border-b px-4 py-3 flex items-center shadow-sm">
+        <Button asChild variant="ghost" size="sm" className="flex items-center mr-4">
+          <Link href="/dashboard">
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back to Dashboard
+          </Link>
+        </Button>
+        <h1 className="text-lg font-medium truncate">{courseData.title}</h1>
+      </div>
+      
+      <div className="flex-1 h-[calc(100vh-57px)]">
+        {courseData.scormPackage.originalZipUrl && (
+          <CourseScormPlayer
+            userId={user.id}
+            courseId={course.id}
+            scormPackageId={courseData.scormPackage.id}
+            scormUrl={courseData.scormPackage.originalZipUrl}
+            scormVersion={courseData.scormPackage.version || "SCORM_12"}
+          />
+        )}
+      </div>
     </div>
   );
 }
