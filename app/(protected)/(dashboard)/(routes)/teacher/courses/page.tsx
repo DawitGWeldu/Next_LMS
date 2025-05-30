@@ -30,20 +30,6 @@ const CoursesPage = async () => {
 
   return ( 
     <div className="p-6">
-      <div className="flex justify-end mb-4 gap-x-2">
-        <Link href="/teacher/import-scorm">
-          <Button>
-            <UploadCloud className="h-4 w-4 mr-2" />
-            Import SCORM Package
-          </Button>
-        </Link>
-        <Link href="/teacher/create">
-          <Button>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            New course
-          </Button>
-        </Link>
-      </div>
       <DataTable columns={columns} data={courses} />
     </div>
    );

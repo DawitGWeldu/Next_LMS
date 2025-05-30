@@ -65,18 +65,18 @@ export default async function CourseScormPage({
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="bg-white border-b px-4 py-3 flex items-center shadow-sm">
+    <div className="flex flex-col h-screen overflow-hidden">
+      <div className="bg-white border-b px-4 py-3 flex items-center shadow-sm flex-shrink-0">
         <Button asChild variant="ghost" size="sm" className="flex items-center mr-4">
           <Link href="/dashboard">
             <ChevronLeft className="h-4 w-4 mr-1" />
-            Back to Dashboard
+            Go Back 
           </Link>
         </Button>
         <h1 className="text-lg font-medium truncate">{courseData.title}</h1>
       </div>
       
-      <div className="flex-1 h-[calc(100vh-57px)]">
+      <div className="flex-grow overflow-hidden" style={{ height: 'calc(100vh - 57px)' }}>
         {courseData.scormPackage.originalZipUrl && (
           <CourseScormPlayer
             userId={user.id}

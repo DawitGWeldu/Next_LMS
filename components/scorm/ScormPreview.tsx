@@ -32,6 +32,8 @@ import {
   findPreviousItem,
   isNavigationAllowed,
 } from "@/lib/client/scorm-manifest-parser";
+import { ExtractedScormPackage } from "@/lib/client/scorm-extractor";
+import { getScormPackage } from "@/lib/client/scorm-cache";
 
 interface ScormPreviewProps {
   /**
@@ -102,7 +104,12 @@ interface ScormPreviewProps {
   /**
    * Called when navigation occurs
    */
-  onNavigate?: (itemId: string, itemTitle: string) => void;
+  onNavigate?: (itemId: string, itemTitle?: string) => void;
+  
+  /**
+   * Called when a SCORM package has been extracted
+   */
+  onPackageExtracted?: (packageData: ExtractedScormPackage) => void;
 }
 
 // Define a more specific SequencingEvent type to handle the additional properties
@@ -700,7 +707,11 @@ export function ScormPreview({
   autoCommitSeconds = 30,
   className,
   onNavigate,
+  onPackageExtracted,
 }: ScormPreviewProps) {
+  // Create a stable component instance ID for the iframe key
+  const stableComponentId = useRef(`scorm-iframe-${Math.random().toString(36).substring(2, 9)}`);
+  
   // State for the iframe content URL
   const [contentUrl, setContentUrl] = useState<string>("");
 
@@ -1009,7 +1020,7 @@ export function ScormPreview({
     onError,
     initializationAttempts
   ]);
-
+  
   /**
    * Handle iframe load event
    */
@@ -1239,9 +1250,11 @@ export function ScormPreview({
       setElapsedTime(0);
       setProgressUpdates([]);
 
-      // Generate a package key if not provided
-      actualPackageKey.current = packageKey || `scorm-${Date.now()}`;
-          
+      // Generate a package key if not provided, but ensure it stays consistent
+      if (!actualPackageKey.current) {
+        actualPackageKey.current = packageKey || `scorm-${stableComponentId.current}`;
+      }
+      
       // Register service worker if not already registered
       await registerScormServiceWorker();
         
@@ -1555,6 +1568,19 @@ export function ScormPreview({
             }
           }
         }
+
+        // Call the onPackageExtracted callback if provided
+        if (scormManifest && onPackageExtracted) {
+          try {
+            // Get the original package from the service worker cache
+            const packageData = await getScormPackage(packageKey || "scorm-preview");
+            if (packageData) {
+              onPackageExtracted(packageData);
+        }
+      } catch (error) {
+            console.error("Error getting extracted package for callback:", error);
+          }
+        }
         }
       } catch (error) {
       console.error("[Preview DEBUG] Error setting up SCORM content:", error);
@@ -1652,7 +1678,7 @@ export function ScormPreview({
           }}
         >
         <iframe
-            key={`scorm-iframe-${Date.now()}`} // Unique key to force re-mount
+            key={stableComponentId.current}
           ref={iframeRef}
             src="" // Start with empty src - will be set once iframe is mounted
             className={cn(
@@ -1753,7 +1779,12 @@ export function ScormPreview({
             <Button
               onClick={() => {
                 if (iframeRef.current && contentUrl) {
-                  const url = contentUrl + "?t=" + Date.now();
+                  // Use a counter instead of Date.now() for cache busting
+                  const counter = reloadAttempts.current + 1;
+                  reloadAttempts.current = counter;
+                  const url = contentUrl.includes('?') 
+                    ? `${contentUrl}&reload=${counter}` 
+                    : `${contentUrl}?reload=${counter}`;
                   console.log("Manually forcing iframe reload to:", url);
                   setIframeSrc(url);
                 }

@@ -13,7 +13,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import Link from "next/link"
-import { PlusCircle } from "lucide-react"
+import { PlusCircle, UploadCloud } from "lucide-react"
 
 import {
   Table,
@@ -64,6 +64,18 @@ export function DataTable<TData, TValue>({
           }
           className="max-w-sm"
         />
+        <Link href="/teacher/import-scorm">
+          <Button>
+            <UploadCloud className="h-4 w-4 mr-2" />
+            Import SCORM Package
+          </Button>
+        </Link>
+        <Link href="/teacher/create">
+          <Button>
+            <PlusCircle className="h-4 w-4 mr-2" />
+            New course
+          </Button>
+        </Link>
       </div>
       <div className="rounded-md border">
         <Table>

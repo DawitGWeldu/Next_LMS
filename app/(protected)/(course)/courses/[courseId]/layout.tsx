@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getProgress } from "@/actions/get-progress";
 
-import { CourseSidebar } from "./_components/course-sidebar";
 import { CourseNavbar } from "./_components/course-navbar";
 import { currentUser } from "@/lib/auth";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -52,8 +51,6 @@ const CourseLayout = async ({
 
   const progressCount = await getProgress(user.id, course.id);
   return (
-
-
     <div className="flex min-h-screen flex-col space-y-6">
       <header className="sticky top-0 z-40 border-b bg-background">
         <div className="container flex h-16 items-center justify-between py-4">
@@ -75,20 +72,13 @@ const CourseLayout = async ({
           </span>
         </div>
       </header>
-      <div className="container grid flex-1 gap-x-2 md:grid-cols-[250px_1fr]">
-        <aside className="hidden  w-full flex-col md:flex">
-          <CourseSidebar
-            course={course}
-            progressCount={progressCount}
-          />
-        </aside>
+      <div className="container flex-1">
         <main className="flex w-full flex-1 flex-col overflow-hidden">
           {children}
         </main>
       </div>
       <SiteFooter className="border-t" />
     </div>
-
   )
 }
 
