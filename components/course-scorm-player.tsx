@@ -442,26 +442,26 @@ const CourseScormPlayerContent = ({
         <div 
           ref={iframeContainerRef} 
           className="absolute inset-0 w-full h-full bg-slate-50"
-        >
-          {error ? (
-            <div className="flex h-full items-center justify-center bg-slate-100 p-4">
-              <p className="text-center text-sm text-red-500">{error.message}</p>
-            </div>
-          ) : (
-            <ScormPreview 
+      >
+        {error ? (
+          <div className="flex h-full items-center justify-center bg-slate-100 p-4">
+            <p className="text-center text-sm text-red-500">{error.message}</p>
+          </div>
+        ) : (
+          <ScormPreview 
               packageUrl={scormUrl}
               scormVersion={scormVersion === "SCORM_12" ? "1.2" : ("2004" as any)}
               packageKey={`scorm-${courseId}-${encodeURIComponent(scormUrl)}`}
-              itemPath={scormItemPath}
-              lmsCommitUrl={`/api/courses/${courseId}/scorm-package/tracking`}
-              lmsGetDataUrl={`/api/courses/${courseId}/scorm-package/tracking`}
-              onDataChange={handleDataChange}
-              onError={handleError}
-              onLoad={handleLoad}
-              onProgress={handleProgress}
+            itemPath={scormItemPath}
+            lmsCommitUrl={`/api/courses/${courseId}/scorm-package/tracking`}
+            lmsGetDataUrl={`/api/courses/${courseId}/scorm-package/tracking`}
+            onDataChange={handleDataChange}
+            onError={handleError}
+            onLoad={handleLoad}
+            onProgress={handleProgress}
               onPackageExtracted={handlePackageExtracted}
               onNavigate={(itemId) => setCurrentItemId(itemId)}
-              autoCommitSeconds={30}
+            autoCommitSeconds={30}
               className="w-full h-full"
             />
           )}
