@@ -4,8 +4,42 @@
  * Type definition for the message event from the service worker
  */
 
+// Import the progress store
+import { useScormProgress } from "./stores/use-scorm-progress";
+
 // Cache name used by the service worker
 const CACHE_NAME = "scorm-cache-v1";
+
+// Track active extraction operations
+const activeExtractions = new Map<string, {
+  cancel: () => void;
+  startTime: number;
+}>();
+
+/**
+ * Check if an extraction is already in progress for a specific key
+ * @param key The package key to check
+ * @returns True if an extraction is in progress
+ */
+export function isExtractionInProgress(key: string): boolean {
+  return activeExtractions.has(key);
+}
+
+/**
+ * Cancel an ongoing extraction operation
+ * @param key The package key for the extraction to cancel
+ * @returns True if an extraction was canceled, false if no extraction was in progress
+ */
+export function cancelExtraction(key: string): boolean {
+  const extraction = activeExtractions.get(key);
+  if (extraction) {
+    console.log(`[Registry] Canceling extraction for key: ${key}`);
+    extraction.cancel();
+    activeExtractions.delete(key);
+    return true;
+  }
+  return false;
+}
 
 export interface ScormServiceWorkerMessage {
   type: 
@@ -182,6 +216,9 @@ export async function extractAndWaitForCompletion(
   const actualKey = key || createKeyFromUrl(url);
 
   console.log(`[Registry DEBUG] Starting extraction with key: ${actualKey}`);
+  
+  // Clear any existing progress for this package key
+  useScormProgress.getState().clearProgress(actualKey);
 
   // First check if this package is already cached
   const isCached = await isScormPackageCached(actualKey);
@@ -247,12 +284,61 @@ export async function extractAndWaitForCompletion(
     let lastProgressTime = Date.now();
     let receivedProgressUpdates = 0;
     let currentStage = "initializing";
+    let startTime = Date.now();
+    
+    // Flag to track if the operation has been canceled
+    let isCanceled = false;
+
+    // Create a cancel function
+    const cancelOperation = () => {
+      console.log(`[Registry DEBUG] Extraction for ${actualKey} canceled`);
+      isCanceled = true;
+      
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      
+      // Stop listening for messages
+      if (cleanup) {
+        cleanup();
+        cleanup = null;
+      }
+      
+      // If the service worker is active, tell it to abort the download
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'abort_extraction',
+          key: actualKey
+        });
+      }
+      
+      // Remove from active extractions
+      activeExtractions.delete(actualKey);
+      
+      // Resolve with a cancellation indication
+      resolve({
+        success: false,
+        key: actualKey,
+        error: 'Extraction canceled'
+      });
+    };
+    
+    // Register this extraction as active
+    activeExtractions.set(actualKey, {
+      cancel: cancelOperation,
+      startTime: Date.now()
+    });
 
     // Set timeout
     if (timeout > 0) {
       timeoutId = setTimeout(() => {
-        if (cleanup) cleanup();
         console.error(`[Registry DEBUG] Extraction timed out after ${timeout}ms - received ${receivedProgressUpdates} progress updates, last stage: ${currentStage}`);
+        
+        // Remove from active extractions
+        activeExtractions.delete(actualKey);
+        
+        if (cleanup) cleanup();
         reject(new Error(`SCORM extraction timed out after ${timeout}ms (last stage: ${currentStage})`));
       }, timeout);
     }
@@ -261,20 +347,13 @@ export async function extractAndWaitForCompletion(
     cleanup = addServiceWorkerMessageListener((event) => {
       const data = event.data;
 
-      // Debug all received messages
-      console.log(`[Registry DEBUG] Received message from service worker:`, 
-        { 
-          type: data.type, 
-          key: data.key, 
-          hasProgress: typeof data.progress === 'number', 
-          stage: data.stage || data.status,
-          fileCount: data.fileCount,
-          processedFiles: data.processedFiles
-        });
-
       // Only process messages related to this extraction
       if (data.key !== actualKey) {
-        console.log(`[Registry DEBUG] Ignoring message for key ${data.key}, waiting for ${actualKey}`);
+        return;
+      }
+      
+      // Don't process messages if canceled
+      if (isCanceled) {
         return;
       }
 
@@ -285,31 +364,56 @@ export async function extractAndWaitForCompletion(
         // Update current stage tracking
         currentStage = data.stage || data.status || currentStage;
         
+        // Adjust progress values to allocate more weight to download stage
+        let adjustedProgress = data.progress;
+        
+        // If we're in download stage, scale progress to use 80% of the bar
+        // This means download goes from 0-80%, and all other stages share the remaining 20%
+        if (currentStage === 'download' || currentStage === 'downloading') {
+          // Scale download progress to 0-80%
+          adjustedProgress = data.progress * 0.8;
+        } else if (currentStage === 'processing') {
+          // Processing goes from 80-90%
+          adjustedProgress = 0.8 + (data.progress * 0.1);
+        } else if (currentStage === 'extracting' || currentStage === 'extract') {
+          // Extraction goes from 90-100%
+          adjustedProgress = 0.9 + (data.progress * 0.1);
+        }
+        
         // Create enhanced progress info object
         const progressInfo: ProgressInfo = {
-          progress: data.progress,
+          progress: adjustedProgress,
           stage: data.stage,
           status: data.status,
-          totalSize: data.totalSize,
+          elapsedTime: now - startTime,
           processedFiles: data.processedFiles,
           fileCount: data.fileCount,
-          elapsedTime: data.elapsedTime
+          totalSize: data.totalSize,
         };
         
-        console.log(
-          `[Registry DEBUG] Progress update #${receivedProgressUpdates}: ` +
-          `${Math.round(data.progress * 100)}%, stage: ${currentStage}, ` +
-          `time since last update: ${now - lastProgressTime}ms, ` +
-          (data.fileCount ? `${data.processedFiles || 0}/${data.fileCount} files, ` : '') +
-          (data.elapsedTime ? `total elapsed: ${Math.round(data.elapsedTime / 1000)}s` : '')
-        );
+        // Call progress callback with info
+        // Note: Store already updated by the message listener, so we just use the callback
+        // for backward compatibility
+        onProgress(adjustedProgress, progressInfo);
         
-        lastProgressTime = now;
-        
-        // Call the progress callback with the enhanced information
-        // For backward compatibility, provide the basic progress value first
-        // and the enhanced info as an optional second parameter
-        onProgress(data.progress, progressInfo);
+        // Log consolidated progress only periodically for debugging
+        if (receivedProgressUpdates % 10 === 0) {
+          console.log(`[Registry DEBUG] Received message from service worker:`, {
+            type: data.type,
+            key: data.key,
+            hasProgress: typeof data.progress === 'number',
+            stage: data.stage,
+            fileCount: data.fileCount,
+            processedFiles: data.processedFiles,
+          });
+          
+          // Calculate elapsed time for logging only
+          const elapsed = now - startTime;
+          const timeSinceLastUpdate = now - lastProgressTime;
+          lastProgressTime = now;
+          
+          console.log(`[Registry DEBUG] Progress update #${receivedProgressUpdates}: ${Math.round(adjustedProgress * 100)}%, stage: ${currentStage}, time since last update: ${timeSinceLastUpdate}ms, total elapsed: ${Math.floor(elapsed / 1000)}s`);
+        }
       } else if (data.type === 'extraction_complete') {
         console.log(`[Registry DEBUG] Extraction complete for ${actualKey}, received ${receivedProgressUpdates} progress updates`);
         
@@ -318,8 +422,13 @@ export async function extractAndWaitForCompletion(
           console.log(`[Registry DEBUG] Extraction timing: download=${data.timings.download}ms, processing=${data.timings.processing}ms, extraction=${data.timings.extraction}ms, total=${data.timings.total}ms`);
         }
         
+        // Clean up resources
         if (timeoutId) clearTimeout(timeoutId);
         if (cleanup) cleanup();
+        
+        // Remove from active extractions
+        activeExtractions.delete(actualKey);
+        
         resolve({
           success: true,
           key: actualKey,
@@ -328,8 +437,14 @@ export async function extractAndWaitForCompletion(
         });
       } else if (data.type === 'extraction_error') {
         console.error(`[Registry DEBUG] Extraction error for ${actualKey}:`, data.error);
+        
+        // Clean up resources
         if (timeoutId) clearTimeout(timeoutId);
         if (cleanup) cleanup();
+        
+        // Remove from active extractions
+        activeExtractions.delete(actualKey);
+        
         resolve({
           success: false,
           key: actualKey,
@@ -446,6 +561,13 @@ export function addServiceWorkerMessageListener(
     return () => {};
   }
 
+  // Variable to track last logged progress for throttling logs
+  let lastLoggedProgress = 0;
+  const PROGRESS_LOG_THRESHOLD = 0.05; // Only log progress changes of 5% or more
+  
+  // Get the progress store functions
+  const { updateProgress } = useScormProgress.getState();
+
   const wrappedHandler = (event: MessageEvent) => {
     // Only forward SCORM-related messages
     if (event.data && 
@@ -477,6 +599,23 @@ export function addServiceWorkerMessageListener(
           if (typeof event.data.elapsedTime === 'number') validatedData.elapsedTime = event.data.elapsedTime;
           if (typeof event.data.startTime === 'number') validatedData.startTime = event.data.startTime;
           if (event.data.timings) validatedData.timings = event.data.timings;
+          
+          // Update the progress store if we have a key
+          if (validatedData.key) {
+            // Create a ProgressInfo object for the store
+            const progressInfo: ProgressInfo = {
+              progress: validatedData.progress,
+              stage: validatedData.stage,
+              status: validatedData.status,
+              totalSize: validatedData.totalSize,
+              processedFiles: validatedData.processedFiles,
+              fileCount: validatedData.fileCount,
+              elapsedTime: validatedData.elapsedTime,
+            };
+            
+            // Update the shared store - it will handle throttling internally
+            updateProgress(validatedData.key, progressInfo);
+          }
         } else if (event.data.type === 'extraction_complete') {
           validatedData.scormObj = event.data.scormObj;
           validatedData.fileList = event.data.fileList;
@@ -486,14 +625,15 @@ export function addServiceWorkerMessageListener(
           validatedData.error = event.data.error || 'Unknown error';
         }
         
-        // Log all incoming service worker messages
-        console.log(`[Registry DEBUG] Raw service worker message received:`, validatedData);
+        // Log raw messages for debugging (with reduced frequency)
+        console.log(`[Registry DEBUG] Raw service worker message received:`, event.data);
         
         // Create a new event with validated data to ensure type safety
         const validatedEvent = new MessageEvent('message', {
           data: validatedData
         });
         
+        // For backward compatibility, still call the handler
         handler(validatedEvent as MessageEvent<ScormServiceWorkerMessage>);
       } catch (error) {
         console.error('[Registry DEBUG] Error processing service worker message:', error, event.data);
@@ -588,6 +728,9 @@ export function hasActiveServiceWorkerController(): boolean {
  * @returns URL to the file served through the service worker
  */
 export function getScormFileUrl(key: string, filePath: string): string {
-  console.log(`[Registry DEBUG] Getting URL for file: ${filePath} in package: ${key}`);
+  // Only log when accessing key files, not every file
+  if (filePath.endsWith('imsmanifest.xml') || filePath === 'fileList.json') {
+    console.log(`[Registry DEBUG] Getting URL for file: ${filePath} in package: ${key}`);
+  }
   return `/__scorm__/${key}/__scorm__/${filePath}`;
 } 

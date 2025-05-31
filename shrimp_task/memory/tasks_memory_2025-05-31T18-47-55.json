@@ -1,0 +1,35 @@
+{
+  "tasks": [
+    {
+      "id": "425a8bdf-cd3f-4ebe-a925-850d86b483bb",
+      "name": "Refactor SCORM service worker to implement download progress tracking",
+      "description": "Replace the current fetch API implementation with XMLHttpRequest in the service worker to enable real-time download progress tracking. Currently, the progress indicator is stuck at 0% until the download completes. The change will allow users to see accurate download progress as the SCORM package is being downloaded.",
+      "notes": "This change is focused solely on implementing download progress tracking without modifying the rest of the functionality. The existing client-side code already handles progress updates correctly, it just isn't receiving them during the download phase.",
+      "status": "completed",
+      "dependencies": [],
+      "createdAt": "2025-05-31T18:27:20.459Z",
+      "updatedAt": "2025-05-31T18:28:24.303Z",
+      "relatedFiles": [
+        {
+          "path": "public/service-worker-scorm.js",
+          "type": "TO_MODIFY",
+          "description": "Service worker script that needs to be modified to implement download progress tracking",
+          "lineStart": 254,
+          "lineEnd": 340
+        },
+        {
+          "path": "lib/client/service-worker-registry.ts",
+          "type": "REFERENCE",
+          "description": "Client-side code that registers and communicates with the service worker",
+          "lineStart": 300,
+          "lineEnd": 400
+        }
+      ],
+      "implementationGuide": "1. Identify the download code section in public/service-worker-scorm.js within the message event handler for 'extract' type messages\n2. Replace the fetch API call with XMLHttpRequest implementation\n3. Add an onprogress event handler to track download progress\n4. Use the existing notifyClients function to send progress updates to clients\n5. Ensure progress values are properly scaled (0-20% for download phase)\n6. Maintain all error handling and existing functionality",
+      "verificationCriteria": "1. The download progress should be visible in the UI starting from 0% and gradually increasing as the download progresses\n2. Progress should be reported within the 0-20% range during download phase\n3. Progress updates should include the totalSize, downloaded amount, and other relevant information\n4. The service worker should handle network errors appropriately\n5. All existing functionality should remain intact, including extraction progress tracking (20-100%)\n6. Manually test by downloading SCORM packages of different sizes to verify progress tracking works",
+      "analysisResult": "The current SCORM service worker implementation uses the fetch API to download SCORM packages, which doesn't provide progress updates during download. By replacing fetch with XMLHttpRequest, we can implement real-time download progress tracking while maintaining all the existing functionality.",
+      "summary": "Successfully implemented download progress tracking in the SCORM service worker by replacing fetch with XMLHttpRequest. The implementation includes real-time progress events, proper scaling within the 0-20% range for the download phase, comprehensive error handling, and detailed logging. The changes maintain all existing functionality while adding the ability to track and report download progress to clients.",
+      "completedAt": "2025-05-31T18:28:24.302Z"
+    }
+  ]
+}

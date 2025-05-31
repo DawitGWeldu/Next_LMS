@@ -15,6 +15,11 @@ import {
   hasActiveServiceWorkerController,
   isServiceWorkerSupported,
   getScormFileUrl,
+  isScormPackageCached,
+  ProgressInfo as SWProgressInfo,
+  ScormExtractionResult,
+  isExtractionInProgress,
+  cancelExtraction
 } from "@/lib/client/service-worker-registry";
 import scormApi, {
   ScormVersion,
@@ -34,6 +39,10 @@ import {
 } from "@/lib/client/scorm-manifest-parser";
 import { ExtractedScormPackage } from "@/lib/client/scorm-extractor";
 import { getScormPackage } from "@/lib/client/scorm-cache";
+import { usePackageProgress } from "@/lib/client/stores/use-scorm-progress";
+import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 
 interface ScormPreviewProps {
   /**
@@ -140,7 +149,7 @@ interface ScormObjectFormat2 {
 }
 
 // Define a type for the extraction result
-interface ScormExtractionResult {
+interface LocalScormExtractionResult {
   success: boolean;
   error?: string;
   scormObj?: unknown; // Use unknown to allow for type assertions
@@ -181,6 +190,13 @@ interface ProgressInfo {
   processedFiles?: number;
   fileCount?: number;
   elapsedTime?: number;
+}
+
+// Interface for tracking progress updates over time
+interface ProgressUpdate {
+  time: number; 
+  value: number; 
+  stage?: string;
 }
 
 /**
@@ -394,23 +410,8 @@ function ScormLoadingIndicator({
 
   // Get estimated time remaining (if enough information is available)
   const getEstimatedTimeRemaining = () => {
-    if (!elapsedTime || progress <= 0.02 || progress >= 0.99) return null;
-
-    // Calculate estimated total time based on progress so far
-    const estimatedTotalMs = elapsedTime / progress;
-    const remainingMs = estimatedTotalMs - elapsedTime;
-
-    // Only show if we have a reasonable estimate (more than 2 seconds remaining)
-    if (remainingMs < 2000) return null;
-
-    const remainingSec = Math.floor(remainingMs / 1000);
-    const remainingMin = Math.floor(remainingSec / 60);
-
-    if (remainingMin > 0) {
-      return `~${remainingMin}m ${remainingSec % 60}s remaining`;
-    }
-
-    return `~${remainingSec}s remaining`;
+    // Returning null to disable time remaining calculation as requested
+    return null;
   };
 
   // Determine progress bar color based on stage
@@ -520,11 +521,6 @@ function ScormLoadingIndicator({
 
       {/* Progress percentage */}
       <p className="text-sm font-medium text-gray-700">{getMessage()}</p>
-
-      {/* Estimated time remaining */}
-      {estimatedRemaining && (
-        <p className="text-xs text-gray-500 mt-1">{estimatedRemaining}</p>
-      )}
 
       {/* Additional progress details */}
       {(fileCount || totalSize || elapsedTime) && (
@@ -710,14 +706,23 @@ export function ScormPreview({
   // State for loading and extraction progress
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [loadingError, setLoadingError] = useState<Error | null>(null);
-  const [extractionProgress, setExtractionProgress] = useState<number>(0);
-
-  // Enhanced progress state
-  const [progressStage, setProgressStage] = useState<string>("initializing");
-  const [processedFiles, setProcessedFiles] = useState<number>(0);
-  const [totalFiles, setTotalFiles] = useState<number>(0);
-  const [packageSize, setPackageSize] = useState<number>(0);
-  const [elapsedTime, setElapsedTime] = useState<number>(0);
+  
+  // Reference for the package key to use with progress store
+  const actualPackageKey = useRef<string>("");
+  
+  // Get progress information from the shared store
+  const progressInfo = usePackageProgress(actualPackageKey.current);
+  
+  // For backward compatibility, maintain some local state
+  const [progressUpdates, setProgressUpdates] = useState<Array<{
+    time: number;
+    value: number;
+    stage?: string;
+  }>>([]);
+  
+  // Track the last displayed progress to reduce unnecessary updates
+  const lastDisplayedProgress = useRef<number>(0);
+  const PROGRESS_UPDATE_THRESHOLD = 0.02; // Only update on 2% or greater changes
 
   // State for SCORM data
   const [scormManifest, setScormManifest] = useState<ScormManifest | null>(
@@ -730,7 +735,6 @@ export function ScormPreview({
   // Refs to track component mount state and package key
   const isMounted = useRef(true);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const actualPackageKey = useRef<string>("");
   const iframeDomMounted = useRef(false);
   const pendingUrl = useRef<string | null>(null);
 
@@ -742,11 +746,6 @@ export function ScormPreview({
   // Tracking for auto-commit
   const commitIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Add debug state to track progress updates
-  const [progressUpdates, setProgressUpdates] = useState<
-    { time: number; value: number; stage?: string }[]
-  >([]);
-
   // Force iframe reload attempts counter
   const reloadAttempts = useRef(0);
 
@@ -1182,6 +1181,11 @@ export function ScormPreview({
       isMounted.current = false;
       iframeDomMounted.current = false;
       
+      // If there's an active extraction, cancel it
+      if (actualPackageKey.current) {
+        cancelExtraction(actualPackageKey.current);
+      }
+      
       // Clear the commit interval if it exists
       if (commitIntervalRef.current) {
         clearInterval(commitIntervalRef.current);
@@ -1234,17 +1238,20 @@ export function ScormPreview({
       setIframeReady(false);
 
       // Reset progress state
-      setExtractionProgress(0);
-      setProgressStage("initializing");
-      setProcessedFiles(0);
-      setTotalFiles(0);
-      setPackageSize(0);
-      setElapsedTime(0);
       setProgressUpdates([]);
 
       // Generate a package key if not provided, but ensure it stays consistent
       if (!actualPackageKey.current) {
         actualPackageKey.current = packageKey || `scorm-${stableComponentId.current}`;
+      }
+      
+      // Check if there's already an extraction in progress for this package
+      const isAlreadyExtracting = isExtractionInProgress(actualPackageKey.current);
+      if (isAlreadyExtracting) {
+        console.log(`[Preview DEBUG] Extraction already in progress for ${actualPackageKey.current}, waiting for it to complete`);
+        // We don't need to do anything here - the progress updates from the existing extraction
+        // will be received by our message listener and we'll update the UI accordingly
+        return;
       }
       
       // Register service worker if not already registered
@@ -1267,58 +1274,47 @@ export function ScormPreview({
         const result = await extractAndWaitForCompletion(
           extractionUrl,
           actualPackageKey.current,
-        (progress, progressInfo) => {
+          (progress, progressInfo) => {
             if (isMounted.current) {
-            console.log("It's mounted here");
-            const now = Date.now();
+              const now = Date.now();
 
-            // Get stage information from progressInfo
-            const stage =
-              progressInfo?.stage || progressInfo?.status || "extracting";
-
-            console.log(
-              `[Preview DEBUG] Progress update: ${Math.round(
-                progress * 100
-              )}%, stage: ${stage}, elapsed: ${now - extractionStartTime}ms`
-            );
-
-            // Store progress update history with stage information
-            setProgressUpdates((prev) => [
-              ...prev,
-              {
-                time: now,
-                value: progress,
-                stage,
-              },
-            ]);
-
-            // Update basic progress state
-              setExtractionProgress(progress);
+              // Get stage information from progressInfo
+              const stage =
+                progressInfo?.stage || progressInfo?.status || "extracting";
               
-            // Update enhanced progress state if available
-            if (progressInfo) {
-              setProgressStage(stage);
+              // Only update UI and log for significant changes
+              const progressDiff = Math.abs(progress - lastDisplayedProgress.current);
+              const shouldUpdate = progressDiff >= PROGRESS_UPDATE_THRESHOLD;
+              
+              // Always update for non-download stages or stage changes
+              const isDownloadStage = stage === 'download';
+              const isStageChange = stage !== progressUpdates[progressUpdates.length - 1]?.stage;
+              
+              if (shouldUpdate || !isDownloadStage || isStageChange) {
+                // Only log when actually updating the UI
+                console.log(
+                  `[Preview DEBUG] Progress update: ${Math.round(
+                    progress * 100
+                  )}%, stage: ${stage}, elapsed: ${now - extractionStartTime}ms`
+                );
 
-              if (typeof progressInfo.processedFiles === "number") {
-                setProcessedFiles(progressInfo.processedFiles);
-              }
+                // Store progress update history with stage information
+                setProgressUpdates((prev) => [
+                  ...prev,
+                  {
+                    time: now,
+                    value: progress,
+                    stage,
+                  },
+                ]);
 
-              if (typeof progressInfo.fileCount === "number") {
-                setTotalFiles(progressInfo.fileCount);
-              }
-
-              if (typeof progressInfo.totalSize === "number") {
-                setPackageSize(progressInfo.totalSize);
-              }
-
-              if (typeof progressInfo.elapsedTime === "number") {
-                setElapsedTime(progressInfo.elapsedTime);
-              }
-            }
-
-            // Call the external progress callback if provided
-              if (onProgress) {
-                onProgress(progress);
+                // Call the external progress callback if provided
+                if (onProgress) {
+                  onProgress(progress);
+                }
+                
+                // Update the last displayed progress
+                lastDisplayedProgress.current = progress;
               }
             }
           }
@@ -1597,8 +1593,6 @@ export function ScormPreview({
     // Reset states
     setIsLoading(true);
     setLoadingError(null);
-    setExtractionProgress(0);
-    setIframeReady(false);
     
     // Trigger a fresh load
     setupServiceWorkerAndLoadContent();
@@ -1624,12 +1618,12 @@ export function ScormPreview({
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-white/90 z-10">
           <ScormLoadingIndicator
-            progress={extractionProgress}
-            stage={progressStage}
-            processedFiles={processedFiles}
-            fileCount={totalFiles}
-            totalSize={packageSize}
-            elapsedTime={elapsedTime}
+            progress={progressInfo?.progress || 0}
+            stage={progressInfo?.stage}
+            processedFiles={progressInfo?.processedFiles}
+            fileCount={progressInfo?.fileCount}
+            totalSize={progressInfo?.totalSize}
+            elapsedTime={progressInfo?.elapsedTime}
           />
           
         </div>

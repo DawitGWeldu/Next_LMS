@@ -10,6 +10,14 @@ const FOLDER_PREFIX = "__scorm__";
 const CACHE_NAME = "scorm-cache-v1";
 const resolvers = {};
 
+// Variables for throttling progress updates
+let lastReportedProgress = 0;
+let lastReportedTime = 0;
+const PROGRESS_THRESHOLD = 0.01; // 1% change threshold
+const LOG_THRESHOLD = 0.05; // 5% change threshold for logging
+const TIME_THRESHOLD = 250; // 250ms time threshold
+const LOG_TIME_THRESHOLD = 1000; // 1000ms time threshold for logging
+
 /**
  * Parses the imsmanifest.xml file to extract SCORM metadata
  * @param {string} manifestContent XML content of the manifest file
@@ -357,18 +365,93 @@ self.addEventListener("message", async (event) => {
         startTime: stageTimings.start
       });
       
-      // Fetch the SCORM package
+      // Fetch the SCORM package using streaming to track download progress
       console.log(`[SW DEBUG] Starting download of SCORM package from ${url}`);
-      const request = await fetch(url);
-      if (!request.ok) {
-        throw new Error(`Failed to fetch SCORM package: ${request.status}`);
+      
+      // Reset progress tracking variables for this download
+      lastReportedProgress = 0;
+      lastReportedTime = 0;
+      
+      let blob;
+      try {
+        // Make the initial fetch request
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch SCORM package: ${response.status}`);
+        }
+        
+        // Get content length if available
+        const contentLength = parseInt(response.headers.get('content-length') || '0', 10);
+        if (contentLength === 0) {
+          // If content length is not available, we can't track progress
+          // Just download the whole thing directly
+          blob = await response.blob();
+        } else {
+          // We have a content length, so we can track download progress
+          // Setup progress tracking
+          const reader = response.body.getReader();
+          let receivedLength = 0;
+          const chunks = [];
+          
+          // Read the stream
+          while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) {
+              break;
+            }
+            
+            // Push chunk to array
+            chunks.push(value);
+            receivedLength += value.length;
+            
+            // Calculate progress
+            const progress = receivedLength / contentLength;
+            const now = Date.now();
+            const progressDiff = Math.abs(progress - lastReportedProgress);
+            const timeDiff = now - lastReportedTime;
+            
+            // Only report progress if significant change or enough time passed
+            if (progressDiff >= PROGRESS_THRESHOLD || timeDiff >= TIME_THRESHOLD) {
+              // Report progress updates - scale within 0-20% range for download phase
+              notifyClients({ 
+                type: "extraction_progress", 
+                key: urlKey,
+                status: "downloading",
+                stage: "download",
+                progress: progress * 0.2, // Scale to 0-20% of overall process
+                totalSize: contentLength,
+                downloaded: receivedLength,
+                startTime: stageTimings.start,
+                elapsedTime: now - stageTimings.start
+              });
+              
+              // Only log significant changes to console
+              if (progressDiff >= LOG_THRESHOLD || timeDiff >= LOG_TIME_THRESHOLD) {
+                console.log(`[SW DEBUG] Download progress: ${Math.round(progress * 100)}%, ${receivedLength}/${contentLength} bytes`);
+              }
+              
+              // Update last reported values
+              lastReportedProgress = progress;
+              lastReportedTime = now;
+            }
+          }
+          
+          // Concatenate chunks into a single Uint8Array
+          const chunksAll = new Uint8Array(receivedLength);
+          let position = 0;
+          for (const chunk of chunks) {
+            chunksAll.set(chunk, position);
+            position += chunk.length;
+          }
+          
+          // Convert to blob
+          blob = new Blob([chunksAll]);
+        }
+      } catch (error) {
+        console.error("Download error:", error);
+        throw new Error(`Failed to download SCORM package: ${error.message}`);
       }
-      
-      // Get content length if available
-      const contentLength = parseInt(request.headers.get('content-length') || '0', 10);
-      
-      // Get the blob and prepare JSZip
-      const blob = await request.blob();
       
       // Record download completion time
       stageTimings.download = Date.now();
@@ -781,14 +864,18 @@ async function notifyClients(message) {
   
   // Enhanced logging for progress messages
   if (message.type === 'extraction_progress') {
-    const progressPercent = Math.round((message.progress || 0) * 100);
-    const stage = message.stage || message.status || 'unknown';
-    const fileInfo = message.fileCount ? 
-      `${message.processedFiles || 0}/${message.fileCount} files` : '';
-    const timeInfo = message.elapsedTime ? 
-      `${Math.round(message.elapsedTime / 1000)}s elapsed` : '';
-      
-    console.log(`[SW DEBUG] Progress update: ${progressPercent}%, stage: ${stage}, ${fileInfo} ${timeInfo}`);
+    // Log progress messages only for non-download stages or when it's a significant state change
+    // Download stage progress is already logged in the download loop with throttling
+    if (message.stage !== 'download' || message.status === 'completed') {
+      const progressPercent = Math.round((message.progress || 0) * 100);
+      const stage = message.stage || message.status || 'unknown';
+      const fileInfo = message.fileCount ? 
+        `${message.processedFiles || 0}/${message.fileCount} files` : '';
+      const timeInfo = message.elapsedTime ? 
+        `${Math.round(message.elapsedTime / 1000)}s elapsed` : '';
+        
+      console.log(`[SW DEBUG] Progress update: ${progressPercent}%, stage: ${stage}, ${fileInfo} ${timeInfo}`);
+    }
   }
   
   for (const client of clients) {

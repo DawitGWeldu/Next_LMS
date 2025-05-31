@@ -1,3 +1,96 @@
 {
-  "tasks": []
+  "tasks": [
+    {
+      "id": "d4d07d65-7def-4d31-8bc2-71b22842525b",
+      "name": "Create Zustand store for SCORM progress tracking",
+      "description": "Create a new Zustand store in lib/client/stores/use-scorm-progress.ts that centralizes SCORM download progress state. This store will track progress information indexed by package key to handle multiple packages simultaneously.",
+      "notes": "Keep the store focused only on progress tracking. Don't try to replace other SCORM functionality.",
+      "status": "completed",
+      "dependencies": [],
+      "createdAt": "2025-05-31T19:08:09.573Z",
+      "updatedAt": "2025-05-31T19:11:05.597Z",
+      "relatedFiles": [
+        {
+          "path": "package.json",
+          "type": "REFERENCE",
+          "description": "Check Zustand version (4.5.1)"
+        },
+        {
+          "path": "lib/client/service-worker-registry.ts",
+          "type": "REFERENCE",
+          "description": "Reference for ProgressInfo type definition and message structure"
+        },
+        {
+          "path": "lib/client/stores/use-scorm-progress.ts",
+          "type": "CREATE",
+          "description": "New Zustand store for SCORM progress"
+        }
+      ],
+      "implementationGuide": "1. Create a new directory `lib/client/stores` if it doesn't exist\n2. Implement a Zustand store with the following features:\n   - Store progress information by package key\n   - Track progress percentage, stage, file counts, elapsed time\n   - Implement action to update progress with throttling logic\n   - Add action to clear progress for a specific package key\n   - Add selector to get progress for a specific package key\n3. Ensure the store is client-side only ('use client' directive)\n4. Follow Zustand best practices with typed state and actions",
+      "verificationCriteria": "1. Store successfully creates and maintains separate progress state for different package keys\n2. Includes all necessary progress information (percentage, stage, file counts, etc.)\n3. Implements throttling logic to prevent excessive updates\n4. Follows the project's TypeScript conventions with proper type definitions\n5. Is properly exported for use in other components",
+      "analysisResult": "The SCORM package system has issues with inconsistent download progress reporting and redundant logging due to the lack of a central shared state. Each instance of the ScormPreview component maintains its own state and logs the same progress updates independently. The existing architecture uses Zustand for state management, and we need to create a targeted solution that implements a shared state store for download progress to eliminate the redundant logging and ensure consistent progress reporting across all components.",
+      "summary": "Successfully created a Zustand store for SCORM progress tracking. The store maintains progress information indexed by package key, implements throttling logic based on progress changes and time thresholds, provides methods to update and clear progress, and follows TypeScript conventions with proper type definitions. The store also includes helper functions to access progress for a specific package and integrates well with the existing ProgressInfo type from service-worker-registry.",
+      "completedAt": "2025-05-31T19:11:05.593Z"
+    },
+    {
+      "id": "2df7dd3a-44d9-46a3-8ee2-e82157396d68",
+      "name": "Update service worker registry to use shared progress store",
+      "description": "Modify the service worker message handler in service-worker-registry.ts to update the centralized Zustand store when receiving progress updates instead of just broadcasting events.",
+      "notes": "This change should not break existing code that uses the service worker message listener directly.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "d4d07d65-7def-4d31-8bc2-71b22842525b"
+        }
+      ],
+      "createdAt": "2025-05-31T19:08:09.573Z",
+      "updatedAt": "2025-05-31T19:13:49.367Z",
+      "relatedFiles": [
+        {
+          "path": "lib/client/service-worker-registry.ts",
+          "type": "TO_MODIFY",
+          "description": "Service worker message handler needs updating"
+        },
+        {
+          "path": "lib/client/stores/use-scorm-progress.ts",
+          "type": "REFERENCE",
+          "description": "New store to be used in the service worker registry"
+        }
+      ],
+      "implementationGuide": "1. Import the new SCORM progress store\n2. Update the `addServiceWorkerMessageListener` function to use the store's actions when receiving progress updates\n3. Keep the existing handler behavior for backward compatibility\n4. Add throttling logic to reduce excessive updates:\n   - Only update the store on meaningful progress changes\n   - Maintain a threshold for progress updates (e.g., 2% change)",
+      "verificationCriteria": "1. Service worker registry successfully updates the shared store on progress events\n2. Maintains backward compatibility with existing message handlers\n3. Implements throttling to avoid excessive store updates\n4. Does not create duplicate logs or redundant processing",
+      "analysisResult": "The SCORM package system has issues with inconsistent download progress reporting and redundant logging due to the lack of a central shared state. Each instance of the ScormPreview component maintains its own state and logs the same progress updates independently. The existing architecture uses Zustand for state management, and we need to create a targeted solution that implements a shared state store for download progress to eliminate the redundant logging and ensure consistent progress reporting across all components.",
+      "summary": "Successfully updated the service worker registry to use the shared progress store. Modified the addServiceWorkerMessageListener to update the store on progress events, ensuring the store's throttling logic prevents excessive updates. Maintained backward compatibility with existing handlers while reducing redundant logging. Also updated the extractAndWaitForCompletion function to initialize the store properly and reduce duplicate progress processing.",
+      "completedAt": "2025-05-31T19:13:49.359Z"
+    },
+    {
+      "id": "d501f8c6-f036-41bd-91e0-83a2fa778d7e",
+      "name": "Update ScormPreview component to use shared progress store",
+      "description": "Refactor the ScormPreview.tsx component to use the shared Zustand progress store instead of maintaining local state for progress tracking.",
+      "notes": "Make sure to maintain compatibility with the existing component API so other components that use ScormPreview don't break.",
+      "status": "in_progress",
+      "dependencies": [
+        {
+          "taskId": "d4d07d65-7def-4d31-8bc2-71b22842525b"
+        }
+      ],
+      "createdAt": "2025-05-31T19:08:09.573Z",
+      "updatedAt": "2025-05-31T19:14:12.020Z",
+      "relatedFiles": [
+        {
+          "path": "components/scorm/ScormPreview.tsx",
+          "type": "TO_MODIFY",
+          "description": "Update to use shared progress store"
+        },
+        {
+          "path": "lib/client/stores/use-scorm-progress.ts",
+          "type": "REFERENCE",
+          "description": "Shared store to be used by the component"
+        }
+      ],
+      "implementationGuide": "1. Import the new SCORM progress store\n2. Replace the local progress state variables with store subscription\n3. Remove redundant progress update tracking and logging\n4. Handle initialization of progress tracking with the store on component mount\n5. Clean up any progress-related code that is no longer needed\n6. Keep the existing component props and callbacks for backward compatibility",
+      "verificationCriteria": "1. Component successfully subscribes to the shared store for progress updates\n2. No longer maintains duplicate local state for progress\n3. Correctly updates UI based on shared store data\n4. Maintains backward compatibility with existing props and callbacks\n5. Reduces redundant logging and processing",
+      "analysisResult": "The SCORM package system has issues with inconsistent download progress reporting and redundant logging due to the lack of a central shared state. Each instance of the ScormPreview component maintains its own state and logs the same progress updates independently. The existing architecture uses Zustand for state management, and we need to create a targeted solution that implements a shared state store for download progress to eliminate the redundant logging and ensure consistent progress reporting across all components."
+    }
+  ]
 }

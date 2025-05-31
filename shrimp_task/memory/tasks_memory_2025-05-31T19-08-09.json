@@ -1,0 +1,84 @@
+{
+  "tasks": [
+    {
+      "id": "4fdc7687-3e61-44e2-a127-12fb47f7be3a",
+      "name": "Implement progress throttling in service-worker-scorm.js",
+      "description": "Modify the service worker code to reduce the frequency of progress updates by implementing throttling based on both time and meaningful progress changes. This will prevent flooding the message channel with insignificant updates.",
+      "status": "completed",
+      "dependencies": [],
+      "createdAt": "2025-05-31T18:47:55.322Z",
+      "updatedAt": "2025-05-31T18:51:27.537Z",
+      "relatedFiles": [
+        {
+          "path": "public/service-worker-scorm.js",
+          "type": "TO_MODIFY",
+          "description": "Service worker that handles SCORM package downloads",
+          "lineStart": 350,
+          "lineEnd": 450
+        }
+      ],
+      "implementationGuide": "1. Add a threshold-based progress reporting system in service-worker-scorm.js around line 411\n2. Add variables to track the last reported progress and timestamp\n3. Only send progress updates when progress changes by at least 1% or after 250ms has elapsed\n4. Ensure progress calculation is consistent to prevent jumps\n5. Remove redundant console.log statements\n\nPseudocode:\n```\n// Add at the top of the file\nlet lastReportedProgress = 0;\nlet lastReportedTime = 0;\n\n// In the download loop, modify the progress reporting\nconst progress = receivedLength / contentLength;\nconst now = Date.now();\nconst progressDiff = Math.abs(progress - lastReportedProgress);\nconst timeDiff = now - lastReportedTime;\n\n// Only report progress if significant change or enough time passed\nif (progressDiff >= 0.01 || timeDiff >= 250) {\n  // Send update to clients\n  notifyClients({ ... });\n  \n  // Only log significant changes to console\n  if (progressDiff >= 0.05 || timeDiff >= 1000) {\n    console.log(`[SW DEBUG] Download progress: ${Math.round(progress * 100)}%, ${receivedLength}/${contentLength} bytes`);\n  }\n  \n  lastReportedProgress = progress;\n  lastReportedTime = now;\n}\n```",
+      "verificationCriteria": "1. Verify that progress updates are only sent when there is a significant change (≥1%) or after a minimum time interval (250ms)\n2. Confirm that console logs are reduced and only show meaningful progress changes\n3. Ensure the throttling doesn't affect the overall functionality of the download process",
+      "analysisResult": "The SCORM service worker system has issues with progress reporting and redundant logging. The system consists of three main components: service-worker-scorm.js (handling downloads), service-worker-registry.ts (processing messages), and ScormPreview.tsx (displaying progress). Current issues include excessive progress updates without throttling, redundant logging across all components, and inconsistent progress jumps.",
+      "summary": "Successfully implemented progress throttling in the service worker to reduce redundant updates and logs. Added threshold-based reporting to only send updates when progress changes by at least 1% or after 250ms, with more stringent thresholds for console logs (5% change or 1000ms). Also ensured progress variables are reset for each download and modified the notifyClients function to avoid duplicate logging.",
+      "completedAt": "2025-05-31T18:51:27.535Z"
+    },
+    {
+      "id": "c79a9d2e-c739-42b0-ae44-199198ce686f",
+      "name": "Reduce redundant logging in service-worker-registry.ts",
+      "description": "Modify the service worker registry to reduce excessive logging of progress updates. Currently, every message received from the service worker is logged, creating redundant and noisy logs.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "4fdc7687-3e61-44e2-a127-12fb47f7be3a"
+        }
+      ],
+      "createdAt": "2025-05-31T18:47:55.323Z",
+      "updatedAt": "2025-05-31T18:52:35.488Z",
+      "relatedFiles": [
+        {
+          "path": "lib/client/service-worker-registry.ts",
+          "type": "TO_MODIFY",
+          "description": "Registry that processes service worker messages",
+          "lineStart": 250,
+          "lineEnd": 350
+        }
+      ],
+      "implementationGuide": "1. Modify the service-worker-registry.ts file to implement conditional logging\n2. Add logic to only log significant progress changes or other important events\n3. Replace verbose logging with more concise information\n\nPseudocode:\n```\n// Add at the top of the file or in the appropriate scope\nlet lastLoggedProgress = 0;\n\n// Modify the message handler around line 265\nconst data = event.data;\n\n// Log raw message only for debug purposes or during development\n// console.log(`[Registry DEBUG] Raw service worker message received:`, data); // Remove or comment this line\n\n// For progress updates, only log significant changes\nif (data.type === 'extraction_progress' && typeof data.progress === 'number') {\n  // Only log if progress changed significantly (≥5%)\n  const progressDiff = Math.abs(data.progress - lastLoggedProgress);\n  \n  if (progressDiff >= 0.05) {\n    console.log(`[Registry DEBUG] Received progress update: ${Math.round(data.progress * 100)}%, stage: ${data.stage || data.status || 'unknown'}`);\n    lastLoggedProgress = data.progress;\n  }\n} else {\n  // Always log non-progress messages\n  console.log(`[Registry DEBUG] Received message from service worker:`, { type: data.type, stage: data.stage || data.status });\n}\n```",
+      "verificationCriteria": "1. Verify that the number of logged messages is significantly reduced\n2. Confirm that important events (like extraction complete or errors) are still properly logged\n3. Ensure the reduced logging doesn't impact the ability to debug issues",
+      "analysisResult": "The SCORM service worker system has issues with progress reporting and redundant logging. The system consists of three main components: service-worker-scorm.js (handling downloads), service-worker-registry.ts (processing messages), and ScormPreview.tsx (displaying progress). Current issues include excessive progress updates without throttling, redundant logging across all components, and inconsistent progress jumps.",
+      "summary": "Successfully implemented conditional logging in the service worker registry. Added progress change threshold of 5% for filtering debug messages and modified both the message handler and service worker message listener to reduce redundant logs. Ensured important non-progress messages are still logged while progress updates are throttled, especially during download stages.",
+      "completedAt": "2025-05-31T18:52:35.487Z"
+    },
+    {
+      "id": "b0881654-0cf1-4e50-86dd-5708266d3ca6",
+      "name": "Streamline progress reporting in ScormPreview.tsx",
+      "description": "Modify the ScormPreview component to reduce redundant logging and improve the consistency of progress display. This component is responsible for displaying progress updates to the user.",
+      "status": "completed",
+      "dependencies": [
+        {
+          "taskId": "4fdc7687-3e61-44e2-a127-12fb47f7be3a"
+        },
+        {
+          "taskId": "c79a9d2e-c739-42b0-ae44-199198ce686f"
+        }
+      ],
+      "createdAt": "2025-05-31T18:47:55.323Z",
+      "updatedAt": "2025-05-31T18:54:06.145Z",
+      "relatedFiles": [
+        {
+          "path": "components/scorm/ScormPreview.tsx",
+          "type": "TO_MODIFY",
+          "description": "React component that displays SCORM package progress",
+          "lineStart": 1250,
+          "lineEnd": 1350
+        }
+      ],
+      "implementationGuide": "1. Modify the ScormPreview.tsx progress callback around line 1272\n2. Implement a simple debouncing mechanism to avoid excessive UI updates\n3. Reduce console logging to only show significant changes\n\nPseudocode:\n```\n// Add at the top of the component or in the appropriate scope\nconst lastDisplayedProgress = useRef(0);\n\n// Modify the progress callback in extractAndWaitForCompletion\n(progress, progressInfo) => {\n  if (isMounted.current) {\n    const now = Date.now();\n    const stage = progressInfo?.stage || progressInfo?.status || \"extracting\";\n    \n    // Only update UI and log for significant changes (≥2%)\n    const progressDiff = Math.abs(progress - lastDisplayedProgress.current);\n    \n    if (progressDiff >= 0.02) {\n      // Only log significant progress changes\n      console.log(\n        `[Preview DEBUG] Progress update: ${Math.round(progress * 100)}%, stage: ${stage}, elapsed: ${now - extractionStartTime}ms`\n      );\n      \n      // Update the progress state\n      setExtractionProgress(progress);\n      setProgressStage(stage);\n      \n      // Update reference\n      lastDisplayedProgress.current = progress;\n      \n      // Store in history\n      setProgressUpdates((prev) => [\n        ...prev,\n        {\n          time: now,\n          value: progress,\n          stage,\n        },\n      ]);\n      \n      // Update other progress info if available\n      if (progressInfo) {\n        // (existing code for updating other progress info)\n      }\n      \n      // Call external progress callback\n      if (onProgress) {\n        onProgress(progress);\n      }\n    }\n  }\n}\n```",
+      "verificationCriteria": "1. Verify that progress updates in the UI are smooth and consistent\n2. Confirm that console logs are reduced and only show meaningful progress changes\n3. Ensure the user experience remains responsive and informative",
+      "analysisResult": "The SCORM service worker system has issues with progress reporting and redundant logging. The system consists of three main components: service-worker-scorm.js (handling downloads), service-worker-registry.ts (processing messages), and ScormPreview.tsx (displaying progress). Current issues include excessive progress updates without throttling, redundant logging across all components, and inconsistent progress jumps.",
+      "summary": "Successfully implemented progress throttling in the ScormPreview component. Added a threshold-based approach that only updates the UI when progress changes by at least 2% or when there's a stage change. Used a lastDisplayedProgress reference to track the previous value and avoid redundant updates. Also ensured certain stages (non-download) still get updates regardless of threshold to maintain responsiveness for critical stages.",
+      "completedAt": "2025-05-31T18:54:06.144Z"
+    }
+  ]
+}
