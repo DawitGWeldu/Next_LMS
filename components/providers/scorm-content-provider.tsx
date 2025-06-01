@@ -16,7 +16,6 @@ import {
   useCallback,
   ReactNode 
 } from 'react';
-import { toast } from 'react-hot-toast';
 import { 
   downloadAndExtractScorm, 
   extractScormFromFile,
@@ -24,7 +23,6 @@ import {
   revokeAllObjectURLs 
 } from '@/lib/client/scorm-extractor';
 import { getScormPackage, storeScormPackage } from '@/lib/client/scorm-cache';
-import { buildNavigationTree, NavigationItem, navigateToItem, NavigationResult } from '@/lib/client/scorm-navigation';
 
 // Function to handle common SCORM content loading issues
 function patchScormContentIssues() {
@@ -171,11 +169,6 @@ interface ScormContentContextType {
   scormPackage: ExtractedScormPackage | null;
   
   /**
-   * Navigation tree built from the SCORM package
-   */
-  navigationTree: NavigationItem[];
-  
-  /**
    * Whether content is currently loading
    */
   isLoading: boolean;
@@ -189,21 +182,6 @@ interface ScormContentContextType {
    * Error that occurred during loading, if any
    */
   error: Error | null;
-  
-  /**
-   * Navigate to a specific item in the SCORM package
-   */
-  navigateToItem: (itemId: string) => Promise<NavigationResult | null>;
-  
-  /**
-   * Current item ID being displayed
-   */
-  currentItemId: string | null;
-  
-  /**
-   * Set the current item ID
-   */
-  setCurrentItemId: (itemId: string | null) => void;
   
   /**
    * Clear loaded content and object URLs
@@ -244,11 +222,6 @@ interface ScormContentProviderProps {
    * File object if directly uploading a SCORM package
    */
   scormFile?: File;
-  
-  /**
-   * Initial item ID to navigate to
-   */
-  initialItemId?: string;
 }
 
 /**
@@ -258,15 +231,12 @@ export function ScormContentProvider({
   children, 
   scormUrl, 
   courseId, 
-  scormFile,
-  initialItemId 
+  scormFile
 }: ScormContentProviderProps) {
   const [scormPackage, setScormPackage] = useState<ExtractedScormPackage | null>(null);
-  const [navigationTree, setNavigationTree] = useState<NavigationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [extractionProgress, setExtractionProgress] = useState(0);
   const [error, setError] = useState<Error | null>(null);
-  const [currentItemId, setCurrentItemId] = useState<string | null>(initialItemId || null);
   
   // Use a reference to check if the component is mounted
   const isMounted = useRef(true);
@@ -291,150 +261,14 @@ export function ScormContentProvider({
     }
     
     setScormPackage(null);
-    setNavigationTree([]);
-    setCurrentItemId(null);
   }, []);
-
-  // // Load SCORM content
-  // useEffect(() => {
-  //   if (!isMounted.current) return;
-    
-  //   // Early return if scormUrl is empty
-  //   if (!scormUrl) {
-  //     console.error("No SCORM URL provided");
-  //     setError(new Error("No SCORM URL provided"));
-  //     setIsLoading(false);
-  //     return;
-  //   }
-    
-  //   // Apply SCORM content patches
-  //   patchScormContentIssues();
-    
-  //   // Skip if we already have a package loaded with the same URL
-  //   if (currentPackageRef.current && currentPackageRef.current.originalUrl === scormUrl) {
-  //     console.log("Package already loaded, skipping re-download");
-  //     return;
-  //   }
-    
-  //   console.log("ScormContentProvider: Loading content from URL:", scormUrl);
-    
-  //   const loadScormContent = async () => {
-  //     // Helper function to clean up previous content
-  //     const cleanupPreviousContent = () => {
-  //       if (currentPackageRef.current) {
-  //         revokeAllObjectURLs(currentPackageRef.current);
-  //       }
-  //     };
-      
-  //     try {
-  //       setIsLoading(true);
-  //       setError(null);
-        
-  //       // Clean up previous content if any
-  //       cleanupPreviousContent();
-        
-  //       // Handle direct file upload
-  //       if (scormFile) {
-  //         console.log("Extracting SCORM from file");
-  //         const extracted = await extractScormFromFile(scormFile, (progress) => {
-  //           if (isMounted.current) {
-  //             setExtractionProgress(progress);
-  //           }
-  //         });
-          
-  //         if (isMounted.current) {
-  //           setScormPackage(extracted);
-  //           const navTree = buildNavigationTree(extracted);
-  //           setNavigationTree(navTree);
-  //         }
-  //       } else {
-          // Handle URL-based content (with caching)
-    //       const key = cacheKey();
-          
-    //       // Try to get from cache first
-    //       const cachedPackage = await getScormPackage(key);
-          
-    //       let extractedPackage: ExtractedScormPackage;
-          
-    //       if (cachedPackage) {
-    //         console.log("Using cached SCORM package");
-    //         extractedPackage = cachedPackage;
-    //       } else {
-    //         console.log("Downloading and extracting SCORM package from:", scormUrl);
-            
-    //         // Download and extract
-    //         extractedPackage = await downloadAndExtractScorm(scormUrl, (progress) => {
-    //           if (isMounted.current) {
-    //             setExtractionProgress(progress);
-    //           }
-    //         });
-            
-    //         // Store in cache for future use
-    //         await storeScormPackage(key, extractedPackage);
-    //       }
-          
-    //       if (isMounted.current) {
-    //         setScormPackage(extractedPackage);
-    //         const navTree = buildNavigationTree(extractedPackage);
-    //         setNavigationTree(navTree);
-    //       }
-    //     }
-    //   } catch (err) {
-    //     console.error("Error loading SCORM content:", err);
-    //     if (isMounted.current) {
-    //       setError(err instanceof Error ? err : new Error(String(err)));
-    //     }
-    //   } finally {
-    //     if (isMounted.current) {
-    //       setIsLoading(false);
-    //     }
-    //   }
-    // };
-    
-    // loadScormContent();
-    
-  //   // Cleanup when unmounting or when URL/file changes
-  //   return () => {
-  //     // Use the local cleanup function to avoid dependency issues
-  //     if (currentPackageRef.current) {
-  //       revokeAllObjectURLs(currentPackageRef.current);
-  //     }
-  //   };
-  // }, [scormUrl, scormFile, courseId, cacheKey]); // Removed scormPackage dependency to avoid infinite loop
-
-  // Function to navigate to a specific item
-  const handleNavigateToItem = useCallback(async (itemId: string): Promise<NavigationResult | null> => {
-    if (!scormPackage) {
-      return null;
-    }
-    
-    try {
-      return navigateToItem(scormPackage, itemId);
-    } catch (err) {
-      console.error("Error navigating to item:", err);
-      toast.error("Failed to navigate to the selected item");
-      return null;
-    }
-  }, [scormPackage]);
-
-  // // Clean up when the component unmounts
-  // useEffect(() => {
-  //   return () => {
-  //     isMounted.current = false;
-  //     clearContent();
-  //   };
-  // }, [clearContent]);
 
   // The context value
   const contextValue: ScormContentContextType = {
     scormPackage,
-    navigationTree,
     isLoading,
     extractionProgress,
     error,
-    navigateToItem: handleNavigateToItem,
-    currentItemId,
-    setCurrentItemId,
     clearContent,
     mainScormUrl: scormUrl
   };

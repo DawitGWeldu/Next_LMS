@@ -364,21 +364,8 @@ export async function extractAndWaitForCompletion(
         // Update current stage tracking
         currentStage = data.stage || data.status || currentStage;
         
-        // Adjust progress values to allocate more weight to download stage
-        let adjustedProgress = data.progress;
-        
-        // If we're in download stage, scale progress to use 80% of the bar
-        // This means download goes from 0-80%, and all other stages share the remaining 20%
-        if (currentStage === 'download' || currentStage === 'downloading') {
-          // Scale download progress to 0-80%
-          adjustedProgress = data.progress * 0.8;
-        } else if (currentStage === 'processing') {
-          // Processing goes from 80-90%
-          adjustedProgress = 0.8 + (data.progress * 0.1);
-        } else if (currentStage === 'extracting' || currentStage === 'extract') {
-          // Extraction goes from 90-100%
-          adjustedProgress = 0.9 + (data.progress * 0.1);
-        }
+        // Use progress directly from service worker without rescaling
+        const adjustedProgress = data.progress;
         
         // Create enhanced progress info object
         const progressInfo: ProgressInfo = {
@@ -410,8 +397,8 @@ export async function extractAndWaitForCompletion(
           // Calculate elapsed time for logging only
           const elapsed = now - startTime;
           const timeSinceLastUpdate = now - lastProgressTime;
-          lastProgressTime = now;
-          
+        lastProgressTime = now;
+        
           console.log(`[Registry DEBUG] Progress update #${receivedProgressUpdates}: ${Math.round(adjustedProgress * 100)}%, stage: ${currentStage}, time since last update: ${timeSinceLastUpdate}ms, total elapsed: ${Math.floor(elapsed / 1000)}s`);
         }
       } else if (data.type === 'extraction_complete') {
@@ -730,7 +717,7 @@ export function hasActiveServiceWorkerController(): boolean {
 export function getScormFileUrl(key: string, filePath: string): string {
   // Only log when accessing key files, not every file
   if (filePath.endsWith('imsmanifest.xml') || filePath === 'fileList.json') {
-    console.log(`[Registry DEBUG] Getting URL for file: ${filePath} in package: ${key}`);
+  console.log(`[Registry DEBUG] Getting URL for file: ${filePath} in package: ${key}`);
   }
   return `/__scorm__/${key}/__scorm__/${filePath}`;
 } 

@@ -5,6 +5,7 @@ import {
   useRef,
   useEffect,
   useCallback,
+  useMemo,
   Component,
   ErrorInfo,
   ReactNode,
@@ -109,11 +110,6 @@ interface ScormPreviewProps {
    * CSS class name for the container
    */
   className?: string;
-
-  /**
-   * Called when navigation occurs
-   */
-  onNavigate?: (itemId: string, itemTitle?: string) => void;
   
   /**
    * Called when a SCORM package has been extracted
@@ -229,7 +225,7 @@ function ScormLoadingIndicator({
   const percentage = Math.min(Math.max(progress * 100, 0), 100);
 
   // Format stage text for display
-  const getStageText = () => {
+  const getStageText = useCallback(() => {
     if (!stage) return "";
 
     switch (stage.toLowerCase()) {
@@ -246,197 +242,164 @@ function ScormLoadingIndicator({
       default:
         return stage.charAt(0).toUpperCase() + stage.slice(1);
     }
-  };
+  }, [stage]);
 
   // Get appropriate icon for current stage
-  const getStageIcon = () => {
+  const getStageIcon = useCallback(() => {
     if (!stage)
-      return <Loader2 className="w-12 h-12 animate-spin mb-4 text-blue-600" />;
+      return <Loader2 className="w-12 h-12 animate-spin mb-4 text-primary" />;
 
     const stageKey = stage.toLowerCase();
 
     if (stageKey === "downloading" || stageKey === "download") {
       return (
-        <div className="relative w-12 h-12 mb-4">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
-          <div className="absolute inset-0 flex items-center justify-center">
+        <div className="w-12 h-12 mb-4 flex items-center justify-center">
             <svg
-              className="w-6 h-6 text-blue-800"
+            className="animate-bounce text-primary"
               fill="none"
+            height="24"
               stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
               viewBox="0 0 24 24"
+            width="24"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-              />
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" x2="12" y1="15" y2="3" />
             </svg>
-          </div>
         </div>
       );
     }
 
     if (stageKey === "processing") {
-      return (
-        <div className="relative w-12 h-12 mb-4">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <svg
-              className="w-6 h-6 text-blue-800"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-              />
-            </svg>
-          </div>
-        </div>
-      );
+      return <Loader2 className="w-12 h-12 animate-spin mb-4 text-primary" />;
     }
 
-    if (stageKey === "extracting" || stageKey === "extract") {
+    if (stageKey === "extract" || stageKey === "extracting") {
       return (
-        <div className="relative w-12 h-12 mb-4">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
-          <div className="absolute inset-0 flex items-center justify-center">
+        <div className="w-12 h-12 mb-4 flex items-center justify-center">
             <svg
-              className="w-6 h-6 text-blue-800"
+            className="animate-spin text-primary"
               fill="none"
+            height="24"
               stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
               viewBox="0 0 24 24"
+            width="24"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
-              />
+            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+            <circle cx="12" cy="13" r="3" />
             </svg>
-          </div>
         </div>
       );
     }
 
     if (stageKey === "complete") {
       return (
-        <div className="relative w-12 h-12 mb-4">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
-          <div className="absolute inset-0 flex items-center justify-center">
+        <div className="w-12 h-12 mb-4 flex items-center justify-center text-green-500 dark:text-green-400">
             <svg
-              className="w-6 h-6 text-green-600"
               fill="none"
+            height="24"
               stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
               viewBox="0 0 24 24"
+            width="24"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
             </svg>
-          </div>
         </div>
       );
     }
 
-    return <Loader2 className="w-12 h-12 animate-spin mb-4 text-blue-600" />;
-  };
+    return <Loader2 className="w-12 h-12 animate-spin mb-4 text-primary" />;
+  }, [stage]);
+
+  // Get appropriate message based on stage and progress
+  const getMessage = useCallback(() => {
+    if (!stage) return `${Math.round(percentage)}% Complete`;
+    
+    // More specific messages based on stage
+    const stageText = getStageText();
+    
+    if (stage.toLowerCase() === "complete" || percentage >= 99.5) {
+      return "Preparing content...";
+    }
+    
+    return `${stageText}: ${Math.round(percentage)}% Complete`;
+  }, [percentage, stage, getStageText]);
+
+  // Determine progress bar color based on stage
+  const getProgressBarColor = useCallback(() => {
+    if (!stage) return "bg-primary";
+
+    const stageKey = stage.toLowerCase();
+
+    if (stageKey === "downloading" || stageKey === "download") {
+      return "bg-primary";
+    }
+
+    if (stageKey === "processing") {
+      return "bg-primary";
+    }
+
+    if (stageKey === "complete") {
+      return "bg-green-500 dark:bg-green-400";
+    }
+
+    if (stageKey === "extract" || stageKey === "extracting") {
+      return "bg-primary";
+    }
+
+    return "bg-primary";
+  }, [stage]);
 
   // Format file size for display
-  const formatSize = (bytes?: number) => {
-    if (!bytes) return "";
-
-    const units = ["B", "KB", "MB", "GB"];
-    let size = bytes;
-    let unitIndex = 0;
-
-    while (size >= 1024 && unitIndex < units.length - 1) {
-      size /= 1024;
-      unitIndex++;
+  const formatSize = useCallback((bytes?: number) => {
+    if (bytes === undefined) return "";
+    
+    if (bytes < 1024) {
+      return `${bytes} B`;
+    } else if (bytes < 1024 * 1024) {
+      return `${(bytes / 1024).toFixed(1)} KB`;
+    } else if (bytes < 1024 * 1024 * 1024) {
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    } else {
+      return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
     }
+  }, []);
 
-    return `${size.toFixed(1)} ${units[unitIndex]}`;
-  };
-
-  // Get display message based on stage and progress
-  const getMessage = () => {
-    const stageText = getStageText();
-
-    if (percentage < 1) {
-      return "Preparing...";
-    }
-
-    let message = `${Math.round(percentage)}% complete`;
-
-    if (stageText) {
-      message = `${stageText} - ${message}`;
-    }
-
-    return message;
-  };
-
-  // Get file progress text if available
-  const getFileProgressText = () => {
-    if (!processedFiles || !fileCount) return "";
-
-    return `${processedFiles}/${fileCount} files`;
-  };
-
-  // Format elapsed time
-  const formatElapsedTime = () => {
+  // Format elapsed time for display
+  const formatElapsedTime = useCallback(() => {
     if (!elapsedTime) return "";
 
     const seconds = Math.floor(elapsedTime / 1000);
-    const minutes = Math.floor(seconds / 60);
 
-    if (minutes > 0) {
+    if (seconds >= 60) {
+      const minutes = Math.floor(seconds / 60);
       return `${minutes}m ${seconds % 60}s`;
     }
 
     return `${seconds}s`;
-  };
+  }, [elapsedTime]);
 
   // Get estimated time remaining (if enough information is available)
-  const getEstimatedTimeRemaining = () => {
+  const getEstimatedTimeRemaining = useCallback(() => {
     // Returning null to disable time remaining calculation as requested
     return null;
-  };
-
-  // Determine progress bar color based on stage
-  const getProgressBarColor = () => {
-    if (!stage) return "bg-blue-600";
-
-    const stageKey = stage.toLowerCase();
-
-    if (stageKey === "downloading" || stageKey === "download") {
-      return "bg-sky-500";
-    }
-
-    if (stageKey === "processing") {
-      return "bg-indigo-600";
-    }
-
-    if (stageKey === "complete") {
-      return "bg-green-500";
-    }
-
-    return "bg-blue-600";
-  };
+  }, []);
 
   // Get progress steps visualization
-  const renderProgressSteps = () => {
+  const renderProgressSteps = useCallback(() => {
     const steps = [
       { key: "downloading", label: "Download" },
       { key: "processing", label: "Process" },
@@ -469,9 +432,9 @@ function ScormLoadingIndicator({
                   w-4 h-4 rounded-full mb-1
                   ${
                     isActive
-                      ? "bg-blue-600 ring-2 ring-blue-200"
+                      ? "bg-primary ring-2 ring-primary-200"
                       : isCompleted
-                      ? "bg-green-500"
+                      ? "bg-green-500 dark:bg-green-400"
                       : "bg-gray-200"
                   }
                 `}
@@ -479,9 +442,9 @@ function ScormLoadingIndicator({
               <span
                 className={`text-xs ${
                   isActive
-                    ? "text-blue-600 font-medium"
+                    ? "text-primary font-medium"
                     : isCompleted
-                    ? "text-green-500"
+                    ? "text-green-500 dark:text-green-400"
                     : "text-gray-400"
                 }`}
               >
@@ -492,9 +455,24 @@ function ScormLoadingIndicator({
         })}
       </div>
     );
-  };
+  }, [stage, progress]);
 
   const estimatedRemaining = getEstimatedTimeRemaining();
+
+  // Memoize components for performance
+  const memoizedIcon = useMemo(() => getStageIcon(), [getStageIcon]);
+  const memoizedMessage = useMemo(() => getMessage(), [getMessage]);
+  const memoizedFileProgress = useMemo(() => {
+    if (processedFiles !== undefined && fileCount !== undefined) {
+      return `${processedFiles} / ${fileCount} files`;
+    }
+    return "";
+  }, [processedFiles, fileCount]);
+  const memoizedElapsedTime = useMemo(() => formatElapsedTime(), [formatElapsedTime]);
+  const memoizedSize = useMemo(() => formatSize(totalSize), [formatSize, totalSize]);
+  
+  // Get the color for the progress bar
+  const progressBarColor = useMemo(() => getProgressBarColor(), [getProgressBarColor]);
 
   // Debug information - only render on client side
   const [isClient, setIsClient] = useState(false);
@@ -503,89 +481,41 @@ function ScormLoadingIndicator({
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center p-8 bg-white rounded shadow-md max-w-md mx-auto my-8 text-center">
-      {getStageIcon()}
-
-      <h3 className="text-lg font-medium mb-2">Loading SCORM Content</h3>
-
-      {/* Progress steps visualization */}
-      {renderProgressSteps()}
+    <Card className="w-[350px] max-w-[90vw] bg-card/80 backdrop-blur-sm shadow-lg border-border overflow-hidden">
+      <div className="flex flex-col items-center justify-center p-6">
+        {/* Icon */}
+        {memoizedIcon}
+        
+        {/* Progress percentage */}
+        <p className="text-sm font-medium text-foreground transition-all duration-300 ease-out">
+          {memoizedMessage}
+        </p>
 
       {/* Progress bar */}
-      <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-        <div
-          className={`${getProgressBarColor()} h-2.5 rounded-full transition-all duration-300 ease-out`}
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-
-      {/* Progress percentage */}
-      <p className="text-sm font-medium text-gray-700">{getMessage()}</p>
-
-      {/* Additional progress details */}
-      {(fileCount || totalSize || elapsedTime) && (
-        <div className="mt-3 flex flex-wrap justify-center items-center gap-x-3 gap-y-1">
-          {getFileProgressText() && (
-            <span className="px-2 py-1 bg-gray-100 rounded text-xs text-gray-700 flex items-center">
-              <svg
-                className="w-3 h-3 mr-1"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              {getFileProgressText()}
-            </span>
+        <div className="w-full mt-4 space-y-2">
+          <Progress 
+            value={percentage} 
+            className="h-2 transition-all duration-300" 
+            indicatorClassName={progressBarColor}
+          />
+          
+          {/* File progress if available */}
+          {processedFiles !== undefined && fileCount !== undefined && (
+            <div className="flex justify-between items-center text-xs text-muted-foreground">
+              <span>{memoizedFileProgress}</span>
+              {totalSize && <span>{memoizedSize}</span>}
+            </div>
           )}
-          {totalSize && (
-            <span className="px-2 py-1 bg-gray-100 rounded text-xs text-gray-700 flex items-center">
-              <svg
-                className="w-3 h-3 mr-1"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
-                />
-              </svg>
-              {formatSize(totalSize)}
-            </span>
-          )}
+          
+          {/* Elapsed time */}
           {elapsedTime && (
-            <span className="px-2 py-1 bg-gray-100 rounded text-xs text-gray-700 flex items-center">
-              <svg
-                className="w-3 h-3 mr-1"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              {formatElapsedTime()}
-            </span>
-          )}
+            <div className="flex justify-end text-xs text-muted-foreground">
+              <span>Time: {memoizedElapsedTime}</span>
         </div>
       )}
-
     </div>
+      </div>
+    </Card>
   );
 }
 
@@ -606,44 +536,50 @@ function ScormErrorDisplay({
   onForceRetry?: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center p-8 text-center">
-      <div className="mb-4 p-3 rounded-full bg-red-100 text-red-600">
-        <AlertTriangle className="h-8 w-8" />
+    <Card className="w-[350px] max-w-[90vw] bg-card/80 backdrop-blur-sm shadow-lg border-border overflow-hidden">
+      <div className="flex flex-col items-center justify-center p-6">
+        <div className="w-12 h-12 mb-4 flex items-center justify-center text-destructive">
+          <AlertTriangle className="h-10 w-10" />
       </div>
-      <h3 className="text-lg font-semibold mb-2">Failed to load SCORM content</h3>
-      <p className="text-sm text-gray-500 mb-4 max-w-md">
+        
+        <h3 className="text-lg font-semibold text-foreground mb-2">
+          {isApiError ? "SCORM API Error" : "Loading Error"}
+        </h3>
+        
+        <p className="text-sm text-muted-foreground text-center mb-4">
         {error.message}
       </p>
       
-      {/* Add more detailed information for API errors */}
-      {isApiError && (
-        <div className="mb-4 p-4 bg-gray-50 rounded text-xs text-left overflow-auto w-full max-w-md max-h-32">
-          <h4 className="font-medium mb-1">Technical Details:</h4>
-          <pre className="whitespace-pre-wrap">{error.stack || error.message}</pre>
-        </div>
-      )}
-      
-      <div className="flex gap-3">
+        <div className="flex gap-2">
         {onRetry && (
-          <button
+            <Button 
             onClick={onRetry}
-            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isRetrying}
-          >
-            {isRetrying ? "Retrying..." : "Try Again"}
-          </button>
-        )}
-        
-        {onForceRetry && (
-          <button
+              className="min-w-[100px]"
+            >
+              {isRetrying ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Retrying...
+                </>
+              ) : (
+                "Try Again"
+              )}
+            </Button>
+          )}
+          
+          {isApiError && onForceRetry && (
+            <Button 
+              variant="outline" 
             onClick={onForceRetry}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+              className="min-w-[100px]"
           >
-            Retry API Initialization
-          </button>
+              Force Reload
+            </Button>
         )}
       </div>
     </div>
+    </Card>
   );
 }
 
@@ -694,7 +630,6 @@ export function ScormPreview({
   onProgress,
   autoCommitSeconds = 30,
   className,
-  onNavigate,
   onPackageExtracted,
 }: ScormPreviewProps) {
   // Create a stable component instance ID for the iframe key
@@ -709,7 +644,17 @@ export function ScormPreview({
   
   // Reference for the package key to use with progress store
   const actualPackageKey = useRef<string>("");
-  
+
+  // Handler for errors
+  const handleError = useCallback((error: Error) => {
+    console.log("SCORM content error caught by boundary:", error);
+    setLoadingError(error);
+    setIsLoading(false);
+    if (onError) {
+      onError(error);
+    }
+  }, [onError]);
+
   // Get progress information from the shared store
   const progressInfo = usePackageProgress(actualPackageKey.current);
   
@@ -723,6 +668,84 @@ export function ScormPreview({
   // Track the last displayed progress to reduce unnecessary updates
   const lastDisplayedProgress = useRef<number>(0);
   const PROGRESS_UPDATE_THRESHOLD = 0.02; // Only update on 2% or greater changes
+  
+  // Add smooth progress animation
+  const [displayedProgress, setDisplayedProgress] = useState<number>(0);
+  const targetProgress = useRef<number>(0);
+  const animationFrameId = useRef<number | null>(null);
+  
+  // Add stage transition smoothing
+  const [displayedStage, setDisplayedStage] = useState<string>("");
+  const stageTransitionTimeout = useRef<NodeJS.Timeout | null>(null);
+  const STAGE_TRANSITION_DELAY = 300; // ms to wait before showing new stage
+
+  // Effect to smoothly animate progress
+  useEffect(() => {
+    // Get progress from store or updates
+    const latestProgress = progressInfo?.progress ?? 
+      (progressUpdates.length > 0 ? progressUpdates[progressUpdates.length - 1].value : 0);
+    
+    // Set as target (but never go backwards)
+    if (latestProgress > targetProgress.current) {
+      targetProgress.current = latestProgress;
+    }
+    
+    // Animation function
+    const animateProgress = () => {
+      setDisplayedProgress(current => {
+        const diff = targetProgress.current - current;
+        // If difference is tiny, snap to target
+        if (Math.abs(diff) < 0.002) return targetProgress.current;
+        // Otherwise move a fraction of the way there (easing)
+        return current + (diff * 0.08); // Adjust this factor to control animation speed
+      });
+      
+      // Continue animation if not at target
+      if (Math.abs(displayedProgress - targetProgress.current) > 0.002) {
+        animationFrameId.current = requestAnimationFrame(animateProgress);
+      }
+    };
+    
+    // Start animation
+    if (!animationFrameId.current) {
+      animationFrameId.current = requestAnimationFrame(animateProgress);
+    }
+    
+    // Clean up
+    return () => {
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+        animationFrameId.current = null;
+      }
+    };
+  }, [progressInfo, progressUpdates, displayedProgress]);
+  
+  // Effect to smooth stage transitions
+  useEffect(() => {
+    // Get the latest stage
+    const latestStage = progressInfo?.stage || "";
+    
+    // Only update if we have a stage and it's different from current
+    if (latestStage && latestStage !== displayedStage) {
+      // Clear any existing timeout
+      if (stageTransitionTimeout.current) {
+        clearTimeout(stageTransitionTimeout.current);
+      }
+      
+      // Set a timeout to update the stage after a delay
+      stageTransitionTimeout.current = setTimeout(() => {
+        setDisplayedStage(latestStage);
+        stageTransitionTimeout.current = null;
+      }, STAGE_TRANSITION_DELAY);
+    }
+    
+    return () => {
+      if (stageTransitionTimeout.current) {
+        clearTimeout(stageTransitionTimeout.current);
+        stageTransitionTimeout.current = null;
+      }
+    };
+  }, [progressInfo?.stage, displayedStage]);
 
   // State for SCORM data
   const [scormManifest, setScormManifest] = useState<ScormManifest | null>(
@@ -745,7 +768,7 @@ export function ScormPreview({
   
   // Tracking for auto-commit
   const commitIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Force iframe reload attempts counter
   const reloadAttempts = useRef(0);
 
@@ -1274,14 +1297,14 @@ export function ScormPreview({
         const result = await extractAndWaitForCompletion(
           extractionUrl,
           actualPackageKey.current,
-          (progress, progressInfo) => {
+        (progress, progressInfo) => {
             if (isMounted.current) {
-              const now = Date.now();
+            const now = Date.now();
 
-              // Get stage information from progressInfo
-              const stage =
-                progressInfo?.stage || progressInfo?.status || "extracting";
-              
+            // Get stage information from progressInfo
+            const stage =
+              progressInfo?.stage || progressInfo?.status || "extracting";
+
               // Only update UI and log for significant changes
               const progressDiff = Math.abs(progress - lastDisplayedProgress.current);
               const shouldUpdate = progressDiff >= PROGRESS_UPDATE_THRESHOLD;
@@ -1292,25 +1315,25 @@ export function ScormPreview({
               
               if (shouldUpdate || !isDownloadStage || isStageChange) {
                 // Only log when actually updating the UI
-                console.log(
-                  `[Preview DEBUG] Progress update: ${Math.round(
-                    progress * 100
-                  )}%, stage: ${stage}, elapsed: ${now - extractionStartTime}ms`
-                );
+            console.log(
+              `[Preview DEBUG] Progress update: ${Math.round(
+                progress * 100
+              )}%, stage: ${stage}, elapsed: ${now - extractionStartTime}ms`
+            );
 
-                // Store progress update history with stage information
-                setProgressUpdates((prev) => [
-                  ...prev,
-                  {
-                    time: now,
-                    value: progress,
-                    stage,
-                  },
-                ]);
+            // Store progress update history with stage information
+            setProgressUpdates((prev) => [
+              ...prev,
+              {
+                time: now,
+                value: progress,
+                stage,
+              },
+            ]);
 
-                // Call the external progress callback if provided
-                if (onProgress) {
-                  onProgress(progress);
+            // Call the external progress callback if provided
+              if (onProgress) {
+                onProgress(progress);
                 }
                 
                 // Update the last displayed progress
@@ -1542,19 +1565,6 @@ export function ScormPreview({
         // Set the current item ID if we found one
         if (startingItemId) {
           setCurrentItemId(startingItemId);
-
-          // Notify about navigation if callback provided
-          if (startingItemId && onNavigate && scormManifest) {
-            // Use the properly typed manifest that we've already processed
-            const orgId = scormManifest.defaultOrganizationIdentifier;
-            if (orgId && scormManifest.organizations[orgId]) {
-              const items = scormManifest.organizations[orgId].items;
-              const item = findItemById(items, startingItemId);
-              if (item) {
-                onNavigate(startingItemId, item.title);
-              }
-            }
-          }
         }
 
         // Call the onPackageExtracted callback if provided
@@ -1616,28 +1626,33 @@ export function ScormPreview({
     <div className={cn("relative w-full h-full", className)}>
       {/* Display loading state */}
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/90 z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-background/90 dark:bg-background/90 z-10">
           <ScormLoadingIndicator
-            progress={progressInfo?.progress || 0}
-            stage={progressInfo?.stage}
+            progress={displayedProgress}
+            stage={displayedStage || "downloading"} 
             processedFiles={progressInfo?.processedFiles}
             fileCount={progressInfo?.fileCount}
             totalSize={progressInfo?.totalSize}
             elapsedTime={progressInfo?.elapsedTime}
           />
-          
         </div>
       )}
       
       {/* Display error state */}
       {loadingError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/90 z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-background/90 dark:bg-background/90 z-10">
           <ScormErrorDisplay 
             error={loadingError} 
             onRetry={handleReload} 
             isRetrying={isRetrying} 
-            isApiError={!isScormApiInitialized}
-            onForceRetry={forceRetryInitialization}
+            // Special handling for API errors
+            isApiError={loadingError?.message?.includes('SCORM API')}
+            onForceRetry={() => {
+              if (iframeRef.current && iframeRef.current.src) {
+                console.log("Forcing reload of iframe with current URL:", iframeRef.current.src);
+                setIframeSrc(iframeRef.current.src);
+              }
+            }}
           />
         </div>
       )}
@@ -1645,148 +1660,26 @@ export function ScormPreview({
       {/* Only render the iframe on the client side */}
       {isClient && (
         <ScormErrorBoundary
-          onError={(error) => {
-            console.log("SCORM content error caught by boundary:", error);
-            setLoadingError(error);
-            setIsLoading(false);
-          }}
+          onError={handleError}
         >
         <iframe
             key={stableComponentId.current}
           ref={iframeRef}
-            src="" // Start with empty src - will be set once iframe is mounted
-            className={cn(
-              "w-full h-full border-0",
-              !contentUrl && "hidden" // Hide when no content URL
-            )}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            className={cn("w-full h-full border-0", {
+              "opacity-0": isLoading || !iframeReady,
+            })}
             allowFullScreen
           title="SCORM Content"
             // Use less restrictive sandbox settings
           sandbox="allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts"
             onLoad={() => {
-              // Only process load events when we have a real src
-              if (
-                iframeRef.current?.src &&
-                !iframeRef.current.src.endsWith("about:blank")
-              ) {
-                console.log(
-                  "Iframe onLoad event fired for URL:",
-                  iframeRef.current?.src
-                );
-                handleIframeLoad();
-              } else {
-                console.log("Initial iframe mount detected (empty src)");
+              // Only handle load when we have a source
+              if (iframeRef.current && iframeRef.current.src) {
+                setIframeReady(true);
               }
             }}
           />
         </ScormErrorBoundary>
-      )}
-
-      {/* Add debug overlay - only on client */}
-      {isClient && (
-        <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm p-3 rounded-lg text-xs border border-slate-200 shadow-md z-10 max-w-[300px] transition-all duration-300 hover:opacity-100 opacity-80">
-          <div className="flex items-center justify-between mb-1.5">
-            <h4 className="font-semibold text-slate-700 flex items-center">
-              <span className="bg-blue-500 w-2 h-2 rounded-full mr-1.5"></span>
-              SCORM Status
-            </h4>
-            <Badge variant={isScormApiInitialized ? "secondary" : "outline"} className="text-[10px] h-4">
-              {isScormApiInitialized ? "API Ready" : "API Pending"}
-            </Badge>
-          </div>
-          
-          <div className="space-y-1.5 divide-y divide-slate-100">
-            <div className="pb-1.5">
-              <div className="grid grid-cols-2 gap-x-2">
-                <div className="text-slate-500">Content URL:</div>
-                <div className="text-slate-700 truncate">
-                  {contentUrl ? contentUrl.split('/').pop() : "None"}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-x-2">
-                <div className="text-slate-500">Iframe Ready:</div>
-                <div className="text-slate-700">
-                  {iframeReady ? 
-                    <span className="text-green-600">Yes</span> : 
-                    <span className="text-amber-600">No</span>
-                  }
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-x-2">
-                <div className="text-slate-500">SCORM Version:</div>
-                <div className="text-slate-700">{scormVersion}</div>
-              </div>
-            </div>
-            
-            <div className="py-1.5">
-              <div className="grid grid-cols-2 gap-x-2">
-                <div className="text-slate-500">Init Attempts:</div>
-                <div className="text-slate-700">
-                  <span className={initializationAttempts > 0 ? "text-amber-600" : "text-slate-700"}>
-                    {initializationAttempts}/{maxInitAttempts}
-                  </span>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-x-2">
-                <div className="text-slate-500">Loading State:</div>
-                <div className="text-slate-700">
-                  {isLoading ? 
-                    <span className="text-amber-600">Loading</span> : 
-                    <span className="text-green-600">Complete</span>
-                  }
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-x-2">
-                <div className="text-slate-500">Retrying:</div>
-                <div className="text-slate-700">
-                  {isRetrying ? 
-                    <span className="text-amber-600">Yes</span> : 
-                    <span className="text-slate-700">No</span>
-                  }
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex gap-1.5 mt-2.5">
-            <Button
-              onClick={() => {
-                if (iframeRef.current && contentUrl) {
-                  // Use a counter instead of Date.now() for cache busting
-                  const counter = reloadAttempts.current + 1;
-                  reloadAttempts.current = counter;
-                  const url = contentUrl.includes('?') 
-                    ? `${contentUrl}&reload=${counter}` 
-                    : `${contentUrl}?reload=${counter}`;
-                  console.log("Manually forcing iframe reload to:", url);
-                  setIframeSrc(url);
-                }
-              }}
-              disabled={!contentUrl}
-              className={cn(
-                "px-2 py-1 rounded text-[10px] h-6 flex-1",
-                contentUrl
-                  ? "bg-blue-500 text-white hover:bg-blue-600"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              )}
-            >
-              <span className="truncate">Reload Frame</span>
-            </Button>
-            <Button
-              onClick={forceRetryInitialization}
-              disabled={isScormApiInitialized}
-              className={cn(
-                "px-2 py-1 rounded text-[10px] h-6 flex-1",
-                !isScormApiInitialized
-                  ? "bg-green-500 text-white hover:bg-green-600"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              )}
-            >
-              <span className="truncate">Retry API</span>
-            </Button>
-          </div>
-        </div>
       )}
     </div>
   );

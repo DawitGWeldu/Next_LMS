@@ -5,9 +5,6 @@ import { Chapter, Course, UserProgress } from "@prisma/client";
 import { getCourse } from "@/actions/get-course";
 import { CourseNavbar } from "../_components/course-navbar";
 import { CourseScormPlayer } from "@/components/course-scorm-player";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
 
 // Define a type compatible with CourseNavbar's expectations
 interface CourseWithUserProgress extends Course {
@@ -66,14 +63,8 @@ export default async function CourseScormPage({
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <div className="bg-white border-b px-4 py-3 flex items-center shadow-sm flex-shrink-0">
-        <Button asChild variant="ghost" size="sm" className="flex items-center mr-4">
-          <Link href="/dashboard">
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Go Back 
-          </Link>
-        </Button>
-        <h1 className="text-lg font-medium truncate">{courseData.title}</h1>
+      <div className="bg-card border-b px-4 py-3 flex items-center shadow-sm flex-shrink-0">
+        <h1 className="text-lg font-medium truncate text-foreground">{courseData.title}</h1>
       </div>
       
       <div className="flex-grow overflow-hidden" style={{ height: 'calc(100vh - 57px)' }}>

@@ -10,13 +10,18 @@ const FOLDER_PREFIX = "__scorm__";
 const CACHE_NAME = "scorm-cache-v1";
 const resolvers = {};
 
-// Variables for throttling progress updates
+// Constants for progress tracking
+const PROGRESS_THRESHOLD = 0.01; // Only report 1% changes
+const TIME_THRESHOLD = 250; // Or every 250ms
+const LOG_THRESHOLD = 0.05; // Only log 5% changes
+const LOG_TIME_THRESHOLD = 1000; // Or every 1000ms
+const BATCH_SIZE = 10; // Number of files to extract in parallel
+const PROGRESS_THROTTLE_MS = 250; // Minimum time between progress updates for extraction
+
+// Variables to track progress reporting
 let lastReportedProgress = 0;
 let lastReportedTime = 0;
-const PROGRESS_THRESHOLD = 0.01; // 1% change threshold
-const LOG_THRESHOLD = 0.05; // 5% change threshold for logging
-const TIME_THRESHOLD = 250; // 250ms time threshold
-const LOG_TIME_THRESHOLD = 1000; // 1000ms time threshold for logging
+let lastProgressUpdate = 0;
 
 /**
  * Parses the imsmanifest.xml file to extract SCORM metadata
@@ -413,22 +418,22 @@ self.addEventListener("message", async (event) => {
             
             // Only report progress if significant change or enough time passed
             if (progressDiff >= PROGRESS_THRESHOLD || timeDiff >= TIME_THRESHOLD) {
-              // Report progress updates - scale within 0-20% range for download phase
-              notifyClients({ 
-                type: "extraction_progress", 
-                key: urlKey,
-                status: "downloading",
-                stage: "download",
-                progress: progress * 0.2, // Scale to 0-20% of overall process
-                totalSize: contentLength,
-                downloaded: receivedLength,
-                startTime: stageTimings.start,
+              // Report progress updates - scale within 0-80% range for download phase
+            notifyClients({ 
+              type: "extraction_progress", 
+              key: urlKey,
+              status: "downloading",
+              stage: "download",
+                progress: progress * 0.8, // Scale to 0-80% of overall process (updated from 0.2)
+              totalSize: contentLength,
+              downloaded: receivedLength,
+              startTime: stageTimings.start,
                 elapsedTime: now - stageTimings.start
-              });
-              
+            });
+            
               // Only log significant changes to console
               if (progressDiff >= LOG_THRESHOLD || timeDiff >= LOG_TIME_THRESHOLD) {
-                console.log(`[SW DEBUG] Download progress: ${Math.round(progress * 100)}%, ${receivedLength}/${contentLength} bytes`);
+            console.log(`[SW DEBUG] Download progress: ${Math.round(progress * 100)}%, ${receivedLength}/${contentLength} bytes`);
               }
               
               // Update last reported values
@@ -464,7 +469,7 @@ self.addEventListener("message", async (event) => {
         key: urlKey,
         status: "processing",
         stage: "processing",
-        progress: 0.1, // Start processing at 10%
+        progress: 0.8, // Start processing at 80% (updated from 0.1)
         totalSize: blob.size,
         downloadTime: downloadDuration,
         startTime: stageTimings.start
@@ -487,7 +492,7 @@ self.addEventListener("message", async (event) => {
         key: urlKey,
         status: "extracting",
         stage: "extraction",
-        progress: 0.2, // Start extraction at 20%
+        progress: 0.9, // Start extraction at 90% (updated from 0.2)
         totalSize: blob.size,
         downloadTime: downloadDuration,
         processingTime: processingDuration,
@@ -624,10 +629,10 @@ self.addEventListener("message", async (event) => {
           // Update progress after each file
           processedFiles++;
           
-          // Calculate progress - scale between 20% and 95%
-          // This leaves room for initial progress (0-20%) and final steps (95-100%)
+          // Calculate progress - scale between 90% and 100%
+          // This leaves room for download (0-80%) and processing (80-90%)
           const extractionProgress = processedFiles / totalFiles;
-          const overallProgress = 0.2 + (extractionProgress * 0.75);
+          const overallProgress = 0.9 + (extractionProgress * 0.1); // Updated from 0.2 + (extractionProgress * 0.75)
           
           const now = Date.now();
           // Only send updates if enough time has passed or it's the last file
@@ -867,14 +872,14 @@ async function notifyClients(message) {
     // Log progress messages only for non-download stages or when it's a significant state change
     // Download stage progress is already logged in the download loop with throttling
     if (message.stage !== 'download' || message.status === 'completed') {
-      const progressPercent = Math.round((message.progress || 0) * 100);
-      const stage = message.stage || message.status || 'unknown';
-      const fileInfo = message.fileCount ? 
-        `${message.processedFiles || 0}/${message.fileCount} files` : '';
-      const timeInfo = message.elapsedTime ? 
-        `${Math.round(message.elapsedTime / 1000)}s elapsed` : '';
-        
-      console.log(`[SW DEBUG] Progress update: ${progressPercent}%, stage: ${stage}, ${fileInfo} ${timeInfo}`);
+    const progressPercent = Math.round((message.progress || 0) * 100);
+    const stage = message.stage || message.status || 'unknown';
+    const fileInfo = message.fileCount ? 
+      `${message.processedFiles || 0}/${message.fileCount} files` : '';
+    const timeInfo = message.elapsedTime ? 
+      `${Math.round(message.elapsedTime / 1000)}s elapsed` : '';
+      
+    console.log(`[SW DEBUG] Progress update: ${progressPercent}%, stage: ${stage}, ${fileInfo} ${timeInfo}`);
     }
   }
   

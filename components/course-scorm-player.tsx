@@ -9,18 +9,12 @@ import {
   X, 
   Maximize2, 
   Minimize2, 
-  FileText, 
-  BookOpen, 
-  Award,
   BarChart3, 
-  Settings,
   Info,
-  ChevronRight,
   ChevronLeft
 } from "lucide-react";
 
 import { ScormPreview } from "@/components/scorm/ScormPreview";
-import { ScormStructureNav } from "@/components/scorm-structure-nav";
 import {
   ScormContentProvider,
   useScormContent,
@@ -57,8 +51,6 @@ const CourseScormPlayerContent = ({
   const iframeContainerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
-  const [scormItemPath, setScormItemPath] = useState<string | undefined>(undefined);
-  const [currentItemId, setCurrentItemId] = useState<string | null>(null);
   
   // State for learning data
   const [progress, setProgress] = useState({
@@ -68,16 +60,12 @@ const CourseScormPlayerContent = ({
   });
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   
-  // State for extracted package to share with ScormStructureNav
+  // State for extracted package
   const [extractedPackage, setExtractedPackage] = useState<ExtractedScormPackage | null>(null);
   const [error, setError] = useState<Error | null>(null);
   
   // Access the shared SCORM content
   const { 
-    navigationTree, 
-    navigateToItem, 
-    currentItemId: contextCurrentItemId,
-    setCurrentItemId: setContextCurrentItemId,
     error: contextError,
     scormPackage,
     mainScormUrl,
@@ -169,7 +157,7 @@ const CourseScormPlayerContent = ({
     [courseId, scormPackageId]
   );
 
-  // Toggle sidebar for mobile view
+  // Toggle sidebar for all screen sizes
   const toggleSidebar = useCallback(() => {
     setShowSidebar((prevState) => !prevState);
   }, []);
@@ -243,39 +231,37 @@ const CourseScormPlayerContent = ({
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-full overflow-hidden">
+    <div className="flex flex-row h-full overflow-hidden">
       {/* Sidebar */}
       <div 
         className={cn(
-          "bg-white border-r flex-shrink-0 h-full transition-all duration-300 overflow-y-auto",
-          showSidebar ? "w-full md:w-80 lg:w-96" : "hidden md:block md:w-0 md:border-r-0"
+          "bg-card border-r flex-shrink-0 h-full transition-all duration-300 overflow-y-auto",
+          showSidebar ? "w-80 lg:w-96" : "w-0 border-r-0"
         )}
       >
-        <div className="p-4 border-b sticky top-0 bg-white z-10">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold truncate">{getTitle()}</h2>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleSidebar}
-              className="md:hidden"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-          {extractedPackage?.manifest?.metadata?.description && (
-            <p className="text-sm text-muted-foreground mt-2 line-clamp-3">
-              {extractedPackage.manifest.metadata.description}
-            </p>
-          )}
-        </div>
+        <Card className="rounded-none border-0 border-b">
+          <CardHeader className="p-4 pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl font-semibold truncate">{getTitle()}</CardTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleSidebar}
+                title="Collapse sidebar"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+            </div>
+            {extractedPackage?.manifest?.metadata?.description && (
+              <CardDescription className="line-clamp-3 mt-1">
+                {extractedPackage.manifest.metadata.description}
+              </CardDescription>
+            )}
+          </CardHeader>
+        </Card>
         
-        <Tabs defaultValue="content" className="w-full">
+        <Tabs defaultValue="progress" className="w-full">
           <TabsList className="w-full justify-start px-4 pt-2">
-            <TabsTrigger value="content" className="flex items-center gap-1">
-              <BookOpen className="h-4 w-4" />
-              <span>Content</span>
-            </TabsTrigger>
             <TabsTrigger value="progress" className="flex items-center gap-1">
               <BarChart3 className="h-4 w-4" />
               <span>Progress</span>
@@ -285,28 +271,6 @@ const CourseScormPlayerContent = ({
               <span>Info</span>
             </TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="content" className="mt-0">
-            <div className="px-4 pt-2">
-              {extractedPackage ? (
-        <ScormStructureNav
-          courseId={courseId}
-          scormPackageId={scormPackageId}
-                  scormUrl={scormUrl}
-                  onNavigate={(url) => {
-                    setScormItemPath(url);
-                  }}
-                  extractedPackage={extractedPackage}
-                />
-              ) : (
-                <div className="flex items-center justify-center py-10">
-                  <p className="text-sm text-muted-foreground">
-                    {isLoading ? "Loading content structure..." : "Content structure not available"}
-                  </p>
-                </div>
-              )}
-            </div>
-          </TabsContent>
           
           <TabsContent value="progress" className="mt-0 p-4">
             <Card>
@@ -406,62 +370,60 @@ const CourseScormPlayerContent = ({
       {/* Content */}
       <div 
         ref={playerRef}
-        className={cn(
-          "flex-1 relative h-full overflow-hidden",
-          !showSidebar ? "md:ml-0" : ""
-        )}
+        className="flex-1 relative h-full overflow-hidden"
       >
-        <div className="absolute top-4 left-4 z-20 flex gap-2">
-          {!showSidebar && (
+        {/* Only show sidebar toggle when sidebar is collapsed */}
+        {!showSidebar && (
+          <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
             <Button
               variant="outline"
               size="icon"
               onClick={toggleSidebar}
-              className="bg-white shadow-md"
+              title="Expand sidebar"
+              className="bg-card/80 backdrop-blur-sm shadow-md border-border hover:bg-accent transition-all duration-300"
             >
-              <Menu className="h-5 w-5" />
+              <Menu className="h-4 w-4" />
             </Button>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="absolute top-4 right-4 z-20 flex gap-2">
           <Button
             variant="outline"
             size="icon"
             onClick={toggleFullscreen}
-            className="bg-white shadow-md"
+            title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            className="bg-card/80 backdrop-blur-sm shadow-md border-border hover:bg-accent transition-all duration-300"
           >
             {isFullscreen ? (
-              <Minimize2 className="h-5 w-5" />
+              <Minimize2 className="h-4 w-4" />
             ) : (
-              <Maximize2 className="h-5 w-5" />
+              <Maximize2 className="h-4 w-4" />
             )}
           </Button>
         </div>
 
         <div 
           ref={iframeContainerRef} 
-          className="absolute inset-0 w-full h-full bg-slate-50"
-      >
-        {error ? (
-          <div className="flex h-full items-center justify-center bg-slate-100 p-4">
-            <p className="text-center text-sm text-red-500">{error.message}</p>
-          </div>
-        ) : (
-          <ScormPreview 
+          className="absolute inset-0 w-full h-full bg-muted"
+        >
+          {error ? (
+            <div className="flex h-full items-center justify-center bg-muted p-4">
+              <p className="text-center text-sm text-destructive">{error.message}</p>
+            </div>
+          ) : (
+            <ScormPreview 
               packageUrl={scormUrl}
               scormVersion={scormVersion === "SCORM_12" ? "1.2" : ("2004" as any)}
               packageKey={`scorm-${courseId}-${encodeURIComponent(scormUrl)}`}
-            itemPath={scormItemPath}
-            lmsCommitUrl={`/api/courses/${courseId}/scorm-package/tracking`}
-            lmsGetDataUrl={`/api/courses/${courseId}/scorm-package/tracking`}
-            onDataChange={handleDataChange}
-            onError={handleError}
-            onLoad={handleLoad}
-            onProgress={handleProgress}
+              lmsCommitUrl={`/api/courses/${courseId}/scorm-package/tracking`}
+              lmsGetDataUrl={`/api/courses/${courseId}/scorm-package/tracking`}
+              onDataChange={handleDataChange}
+              onError={handleError}
+              onLoad={handleLoad}
+              onProgress={handleProgress}
               onPackageExtracted={handlePackageExtracted}
-              onNavigate={(itemId) => setCurrentItemId(itemId)}
-            autoCommitSeconds={30}
+              autoCommitSeconds={30}
               className="w-full h-full"
             />
           )}
@@ -469,9 +431,9 @@ const CourseScormPlayerContent = ({
         
         {/* Debug panel */}
         {showDebugPanel && (
-          <div className="absolute bottom-4 right-4 z-20 w-96 bg-white/90 backdrop-blur-sm border rounded-lg shadow-lg p-3 text-xs font-mono overflow-y-auto max-h-60">
+          <div className="absolute bottom-4 right-4 z-20 w-96 bg-card/90 backdrop-blur-sm border rounded-lg shadow-lg p-3 text-xs font-mono overflow-y-auto max-h-60">
             <div className="flex items-center justify-between mb-2">
-              <h4 className="font-semibold">Debug Information</h4>
+              <h4 className="font-semibold text-foreground">Debug Information</h4>
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -482,16 +444,15 @@ const CourseScormPlayerContent = ({
               </Button>
             </div>
             <Separator className="mb-2" />
-            <div className="space-y-1">
-              <p><span className="text-blue-600">SCORM Version:</span> {scormVersion}</p>
-              <p><span className="text-blue-600">Content URL:</span> {scormUrl ? `...${scormUrl.substring(scormUrl.length - 30)}` : "None"}</p>
-              <p><span className="text-blue-600">Current Item:</span> {currentItemId || "None"}</p>
-              <p><span className="text-blue-600">Loading:</span> {isLoading ? "Yes" : "No"}</p>
-              <p><span className="text-blue-600">Progress:</span> {Math.round(loadingProgress * 100)}%</p>
-              <p><span className="text-blue-600">Score:</span> {progress.score}%</p>
-              <p><span className="text-blue-600">Completion:</span> {progress.completion}%</p>
-              <p><span className="text-blue-600">Status:</span> {progress.status}</p>
-              <p><span className="text-blue-600">Package Extracted:</span> {extractedPackage ? "Yes" : "No"}</p>
+            <div className="space-y-1 text-foreground">
+              <p><span className="text-primary">SCORM Version:</span> {scormVersion}</p>
+              <p><span className="text-primary">Content URL:</span> {scormUrl ? `...${scormUrl.substring(scormUrl.length - 30)}` : "None"}</p>
+              <p><span className="text-primary">Loading:</span> {isLoading ? "Yes" : "No"}</p>
+              <p><span className="text-primary">Progress:</span> {Math.round(loadingProgress * 100)}%</p>
+              <p><span className="text-primary">Score:</span> {progress.score}%</p>
+              <p><span className="text-primary">Completion:</span> {progress.completion}%</p>
+              <p><span className="text-primary">Status:</span> {progress.status}</p>
+              <p><span className="text-primary">Package Extracted:</span> {extractedPackage ? "Yes" : "No"}</p>
             </div>
           </div>
         )}
